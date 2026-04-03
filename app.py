@@ -254,22 +254,40 @@ with st.sidebar:
     st.markdown(f"**FX:** {fx_r:.4f} THB/USD  |  **WHT:** {wht*100:.0f}%")
     st.divider()
     page = st.radio("", [
-        "📊 Dashboard",
-        "📝 Trade Entry",
-        "🔬 Analytics & Optimisation",
-        "💰 Dividend Tracker",
-        "💱 FX Timing",
-        "📈 Monte Carlo",
-        "🏛 Generational Plan",
-        "🔍 WHT Reconciliation",
-        "⏱ Backtest",
-        "📥 Download Report",
-    ], label_visibility="collapsed")
+    "📡 Macro Pulse", 
+    "📋 SEC Intelligence",       
+    "📊 Dashboard",
+    "📝 Trade Entry",
+    "🔬 Analytics & Optimisation",
+    "💰 Dividend Tracker",
+    "💱 FX Timing",
+    "📈 Monte Carlo",
+    "🏛 Generational Plan",
+    "🔍 WHT Reconciliation",
+    "⏱ Backtest",
+    "📥 Download Report",
+], label_visibility="collapsed")
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: Macro Pulse
+# ══════════════════════════════════════════════════════════════════════════════
+
+if page == "📡 Macro Pulse":
+    from engine.macro_monitor import get_macro_data, get_macro_regime, get_risk_gauges
+    # The full page logic lives in pages/03_Macro_Pulse.py
+    # If using multi-page Streamlit, the sidebar link handles routing automatically.
+    # If using single-file app.py, paste the tab body from pages/03_Macro_Pulse.py here.
+    st.switch_page("pages/03_Macro_Pulse.py")
     st.divider()
     if st.button("Clear cache"):
         st.cache_data.clear(); st.rerun()
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: SEC Intelligence
+# ══════════════════════════════════════════════════════════════════════════════
+
+elif page == "📋 SEC Intelligence":
+    st.switch_page("pages/04_SEC_Intelligence.py")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE: DASHBOARD
@@ -369,7 +387,6 @@ elif page == "📝 Trade Entry":
     tx_df = pd.DataFrame(cfg.get("transactions",[]))
     if not tx_df.empty:
         st.dataframe(tx_df, use_container_width=True, hide_index=True)
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE: ANALYTICS & OPTIMISATION
