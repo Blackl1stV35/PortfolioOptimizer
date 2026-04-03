@@ -12,3 +12,4 @@ streamlit>=1.32
 plotly>=5.20
 icalendar>=5.0
 edgartools>=5.0
+juliacall
