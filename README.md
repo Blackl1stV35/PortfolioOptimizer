@@ -9,6 +9,54 @@
 
 ---
 
+# 📊 Portfolio Optimizer Dashboard
+
+## Backtest Results
+<div style="display: flex; justify-content: space-around;">
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/backtest_equity.png" style="width:100%; height:auto;"/>
+    <figcaption>Walk-Forward Equity Curves</figcaption>
+  </figure>
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/backtest_sharpe.png" style="width:100%; height:auto;"/>
+    <figcaption>Rolling Sharpe Ratio</figcaption>
+  </figure>
+</div>
+
+## FX Signal & Generational Plan
+<div style="display: flex; justify-content: space-around;">
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/fx_signal.png" style="width:100%; height:auto;"/>
+    <figcaption>USD/THB FX Signal</figcaption>
+  </figure>
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/generational_plan.png" style="width:100%; height:auto;"/>
+    <figcaption>Generational Wealth Plan</figcaption>
+  </figure>
+</div>
+
+## Distribution & Composition
+<div style="display: flex; justify-content: space-around;">
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/hist.png" style="width:100%; height:auto;"/>
+    <figcaption>Portfolio Returns Histogram</figcaption>
+  </figure>
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/pie.png" style="width:100%; height:auto;"/>
+    <figcaption>Max Sharpe Allocation</figcaption>
+  </figure>
+</div>
+
+## Risk Contribution
+<div style="display: flex; justify-content: center;">
+  <figure style="flex:1; text-align:center; margin:10px; max-width:60%;">
+    <img src="/output/plots/risk_con.png" style="width:100%; height:auto;"/>
+    <figcaption>Risk Contribution per Asset</figcaption>
+  </figure>
+</div>
+
+---
+
 ## What this does
 
 This system replaces the K CYBER TRADE app's analytics with a full quantitative
@@ -298,6 +346,8 @@ Free, always-on, no credit card required.
 2. Sign in to [share.streamlit.io](https://share.streamlit.io) with GitHub
 3. Click **New app** → select your repository → Main file: `app.py` → Deploy
 4. App is live at `https://your-app-name.streamlit.app`
+
+👉 Demo instance (read-only): [portfoliooptimizer-47hvefqgej5ujhtimvhwoo.streamlit.app](https://portfoliooptimizer-47hvefqgej5ujhtimvhwoo.streamlit.app/)
 
 To restrict access to yourself: Settings → Sharing → Viewers must be
 logged in → add your email address.
