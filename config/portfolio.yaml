@@ -174,6 +174,19 @@ transactions:
     total_usd: 596.94         # confirmed KS app screenshot
     note: "DCA tranche -- total BKLN now 185 shares. Bought after Mar ex-div, eligible Apr onwards"
 
+  - id: "T004"
+    date: "2026-04-01"
+    type: "BUY"
+    ticker: "BKLN"
+    exchange: "ARCX"
+    currency: "USD"
+    shares: 7
+    price_usd: 20.30
+    gross_usd: 142.1         
+    commission_usd: 5.34
+    total_usd: 147.44          
+    note: "within buy zone, re-invest dividends"
+
   # TEMPLATE for next trade (uncomment and fill):
   # - id: "T004"
   #   date: "YYYY-MM-DD"
