@@ -1,0 +1,287 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  portfolio.yaml  --  Personal Investment Portfolio
+#  Account   : 397543-7  |  Broker: K CYBER TRADE (Kasikorn Securities)
+#  Holder    : Kanokphan Sirithienthong
+#  Last edit : 2026-03-27
+#
+#  HOW TO USE:
+#    1. When you buy or sell, append a new entry to the TRANSACTIONS section.
+#    2. The HOLDINGS section is AUTO-COMPUTED from transactions — do not edit it.
+#       (Alternatively, if you prefer manual override, set auto_compute: false.)
+#    3. When a dividend is paid, append to DIVIDENDS_RECEIVED.
+#    4. Save the file. If watchdog_runner.py is running, the report fires instantly.
+#    5. Git commit after each change: "git commit -am 'Added BKLN 50 shares @ 20.50'"
+# ══════════════════════════════════════════════════════════════════════════════
+
+meta:
+  account_id: "397543-7"
+  account_holder: "Kanokphan Sirithienthong"
+  broker: "K CYBER TRADE (Kasikorn Securities)"
+  base_currency: "USD"
+  reporting_currency: "THB"
+  data_as_of: "2026-03-27"
+  fx_source: "BOT Weighted-average Interbank Exchange Rate"
+  fx_usd_thb: 32.68        # update manually when rate moves >1 THB
+
+
+settings:
+  risk_free_rate_annual: 0.045    # US T-bill approximation
+  wht_default: 0.30               # 30% US withholding tax (Thai residents, default)
+  wht_treaty: 0.15                # 15% US-Thailand treaty rate (requires W-8BEN on file)
+  wht_active: 0.30                # CHANGE TO 0.15 if KS confirms W-8BEN/treaty applied
+  data_history_start: "2022-01-01"
+  frontier_points: 50
+  report_auto_open: false         # set true to auto-open Excel after each run
+
+
+analysis:
+  strategy: "Aggressive Income Builder"
+  holding_period: "indefinite_generational"
+  target_monthly_income_usd: 200.0
+  dca_monthly_budget_thb: 51000
+  bkln_target_shares: 600
+  risk_tolerance: "aggressive"
+  notes: "Generational wealth strategy. BKLN is the income anchor (monthly float-rate),
+          ARCC is the high-yield BDC satellite (quarterly). SDIV excluded."
+
+
+cash:
+  usd: 158.67           # USD cash in KS account as of 2026-03-27
+  thb: 0.00             # THB cash as of 2026-03-27
+  total_deposited_usd: 6366.84   # all-time deposits per KS Financial report
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  INSTRUMENT DEFINITIONS
+#  (static per-instrument data — dividend policy, exchange, etc.)
+# ══════════════════════════════════════════════════════════════════════════════
+instruments:
+  BKLN:
+    full_name: "Invesco Senior Loan ETF"
+    yfinance_ticker: "BKLN"
+    exchange: "ARCX"
+    currency: "USD"
+    asset_type: "ETF"
+    sector: "Senior Secured Leveraged Loans (floating-rate)"
+    expense_ratio: 0.0065
+    index_tracked: "Morningstar LSTA US Leveraged Loan 100 Index"
+    dividend_policy:
+      frequency: "monthly"
+      amount_per_share_usd: 0.100    # as of Feb 2026; confirmed $0.10 ex Feb 23 2026
+      annual_yield_approx: 0.0707
+      ex_div_pattern: "Approximately last Wednesday/Thursday of each month"
+      pay_date_pattern: "Approximately 4 business days after ex-div"
+      confirmed_dates:
+        - ex: "2026-02-23"
+          pay: "2026-02-27"
+          amount: 0.100
+      estimated_upcoming:
+        - ex: "2026-03-25"           # estimated (may shift 1-2 days)
+          pay: "2026-03-27"
+          amount: 0.100
+          note: "156 eligible (29 new shares bought 2026-03-27 missed this)"
+        - ex: "2026-04-23"
+          pay: "2026-04-27"
+          amount: 0.100
+          note: "All 185 shares eligible"
+        - ex: "2026-05-28"
+          pay: "2026-06-01"
+          amount: 0.100
+
+  ARCC:
+    full_name: "Ares Capital Corporation"
+    yfinance_ticker: "ARCC"
+    exchange: "XNAS"
+    currency: "USD"
+    asset_type: "BDC Stock"
+    sector: "Business Development Company -- Middle Market Senior Loans"
+    dividend_policy:
+      frequency: "quarterly"
+      amount_per_share_usd: 0.48     # confirmed Q1 2026 via SEC 8-K Feb 4 2026
+      annual_yield_approx: 0.1099
+      ex_div_pattern: "Approximately 2nd Friday of March / June / September / December"
+      pay_date_pattern: "End of the same month as ex-div"
+      confirmed_dates:
+        - period: "Q1 2026"
+          declared: "2026-02-04"
+          record: "2026-03-13"
+          ex: "2026-03-12"           # 1 day before record under T+1
+          pay: "2026-03-31"
+          amount: 0.48
+          eligible_for_our_shares: false  # bought 2026-03-25, AFTER ex-date
+          note: "MISSED -- shares purchased 12 days after ex-div"
+      estimated_upcoming:
+        - period: "Q2 2026"
+          ex: "2026-06-12"           # estimated, based on March pattern
+          pay: "2026-06-30"          # estimated
+          amount: 0.48               # estimated (stable $0.48 for 15+ consecutive quarters)
+          eligible_for_our_shares: true
+          expected_gross_usd: 63.84  # 133 shares × $0.48
+        - period: "Q3 2026"
+          ex: "2026-09-11"
+          pay: "2026-09-30"
+          amount: 0.48
+        - period: "Q4 2026"
+          ex: "2026-12-11"
+          pay: "2026-12-31"
+          amount: 0.48
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TRANSACTIONS  --  APPEND EVERY TRADE HERE
+#  The script computes current holdings and avg cost from this ledger.
+#  Format: date (YYYY-MM-DD), type (BUY/SELL/DIV), ticker, shares,
+#          price_usd, gross_usd, commission_usd, total_usd, note
+# ══════════════════════════════════════════════════════════════════════════════
+transactions:
+
+  - id: "T001"
+    date: "2025-12-01"
+    type: "BUY"
+    ticker: "BKLN"
+    exchange: "ARCX"
+    currency: "USD"
+    shares: 156
+    price_usd: 20.90
+    gross_usd: 3260.40        # 156 × 20.90
+    commission_usd: 13.39
+    total_usd: 3273.79        # confirmed KS app screenshot
+    note: "Initial anchor position"
+
+  - id: "T002"
+    date: "2026-03-25"
+    type: "BUY"
+    ticker: "ARCC"
+    exchange: "XNAS"
+    currency: "USD"
+    shares: 133
+    price_usd: 17.96
+    gross_usd: 2388.68        # 133 × 17.96
+    commission_usd: 5.34
+    total_usd: 2394.02        # confirmed KS app screenshot
+    note: "BDC satellite -- first ARCC tranche. NOTE: bought 13 days after Q1 ex-div, missed $63.84 dividend"
+
+  - id: "T003"
+    date: "2026-03-27"
+    type: "BUY"
+    ticker: "BKLN"
+    exchange: "ARCX"
+    currency: "USD"
+    shares: 29
+    price_usd: 20.40
+    gross_usd: 591.60         # 29 × 20.40
+    commission_usd: 5.34
+    total_usd: 596.94         # confirmed KS app screenshot
+    note: "DCA tranche -- total BKLN now 185 shares. Bought after Mar ex-div, eligible Apr onwards"
+
+  # TEMPLATE for next trade (uncomment and fill):
+  # - id: "T004"
+  #   date: "YYYY-MM-DD"
+  #   type: "BUY"            # BUY or SELL
+  #   ticker: "BKLN"         # or ARCC, or new ticker
+  #   exchange: "ARCX"
+  #   currency: "USD"
+  #   shares: 0
+  #   price_usd: 0.00
+  #   gross_usd: 0.00        # shares × price_usd
+  #   commission_usd: 5.34   # KS commission (5.34 observed on recent trades)
+  #   total_usd: 0.00        # gross + commission
+  #   note: ""
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  DIVIDENDS RECEIVED  --  APPEND WHEN EACH DIVIDEND HITS YOUR ACCOUNT
+#  Source for past entries: KS app "Dividend" section (marked as estimates).
+#  WHT applied by KS/DTCC before credit to account -- verify with KS statement.
+# ══════════════════════════════════════════════════════════════════════════════
+dividends_received:
+
+  - period: "2025-12"
+    ticker: "BKLN"
+    shares_eligible: 156
+    ex_date: "2025-12-26"              # estimated
+    pay_date: "2025-12-30"             # estimated
+    amount_per_share_usd: 0.101        # estimated
+    gross_usd_estimated: 15.756
+    wht_rate_assumed: 0.30
+    net_usd_estimated: 11.029
+    thb_ks_app: 421.54                 # from KS app screenshot (marked as estimate)
+    source: "KS app estimate"
+
+  - period: "2026-01"
+    ticker: "BKLN"
+    shares_eligible: 156
+    ex_date: "2026-01-22"              # estimated
+    pay_date: "2026-01-27"             # estimated
+    amount_per_share_usd: 0.101        # estimated
+    gross_usd_estimated: 15.756
+    wht_rate_assumed: 0.30
+    net_usd_estimated: 11.029
+    thb_ks_app: null                   # not broken down in app
+    source: "KS app estimate (part of 2026 YTD total 1356.92 THB)"
+
+  - period: "2026-02"
+    ticker: "BKLN"
+    shares_eligible: 156
+    ex_date: "2026-02-23"              # CONFIRMED
+    pay_date: "2026-02-27"             # CONFIRMED
+    amount_per_share_usd: 0.100        # CONFIRMED ($0.10/share)
+    gross_usd_estimated: 15.60
+    wht_rate_assumed: 0.30
+    net_usd_estimated: 10.92
+    thb_ks_app: null
+    source: "KS app estimate (confirmed ex/pay dates via stockanalysis.com)"
+
+  - period: "2026-03"
+    ticker: "BKLN"
+    shares_eligible: 156               # 29 new shares bought 2026-03-27 -- AFTER ex-div
+    ex_date: "2026-03-25"              # estimated
+    pay_date: "2026-03-27"             # estimated
+    amount_per_share_usd: 0.100        # estimated
+    gross_usd_estimated: 15.60
+    wht_rate_assumed: 0.30
+    net_usd_estimated: 10.92
+    thb_ks_app: null
+    source: "Estimated -- not yet paid as of data_as_of date"
+    status: "pending"
+
+  # 2026-03 ARCC Q1 -- MISSED (ex-date was 2026-03-12, bought 2026-03-25)
+  # Would have been: 133 shares × $0.48 = $63.84 gross / $44.69 net (30% WHT)
+
+  # TEMPLATE for next dividend (uncomment and fill):
+  # - period: "2026-04"
+  #   ticker: "BKLN"
+  #   shares_eligible: 185       # all shares eligible from April onwards
+  #   ex_date: "2026-04-23"
+  #   pay_date: "2026-04-27"
+  #   amount_per_share_usd: 0.100
+  #   gross_usd_estimated: 18.50
+  #   wht_rate_assumed: 0.30
+  #   net_usd_estimated: 12.95
+  #   thb_ks_app: null           # fill after receiving KS statement
+  #   source: "Actual"
+  #   status: "received"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  PORTFOLIO SUMMARY (auto-populated by script -- do not edit manually)
+#  These totals are from KS app screenshots as of 2026-03-27
+# ══════════════════════════════════════════════════════════════════════════════
+ks_app_snapshot_20260327:
+  market_value_thb: 198274.20
+  total_cost_thb: 204235.24
+  unrealized_thb: -5961.04
+  unrealized_pct: -0.0292
+  total_dividends_thb: 1778.46
+  realized_thb: 0.00
+  positions:
+    BKLN:
+      shares: 185
+      avg_cost: 20.92
+      close_price: 20.33
+      unrealized_thb: -3575.64
+    ARCC:
+      shares: 133
+      avg_cost: 18.00
+      close_price: 17.45
+      unrealized_thb: -2385.39

@@ -1,0 +1,76 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  config/views.yaml  --  Black-Litterman Investment Views
+#  ═══════════════════════════════════════════════════════════════════════════
+#
+#  Edit this file to encode your forward-looking market views.
+#  The portfolio optimiser blends these with historical data using the
+#  Black-Litterman model, making weight recommendations forward-looking.
+#
+#  VIEW TYPES:
+#    absolute  -- you believe ticker X will return Y% annualised
+#    relative  -- you believe ticker_long outperforms ticker_short by Y%
+#
+#  CONFIDENCE: 0.0 = no confidence (uses pure history), 1.0 = absolute certainty
+#  Recommended range: 0.40 – 0.75
+#
+#  UPDATING: Edit this file and save. If watchdog_runner.py is running,
+#  the full analysis re-runs automatically incorporating your new views.
+# ══════════════════════════════════════════════════════════════════════════════
+
+views:
+
+  # View 1: BKLN -- floating rate ETF benefits from higher-for-longer rates
+  - type: absolute
+    ticker: BKLN
+    expected_return: 0.085          # 8.5% annualised (slightly above current yield)
+    confidence: 0.65
+    horizon_months: 12
+    rationale: >
+      Fed holding rates elevated well into 2026. BKLN floating-rate coupons
+      reset quarterly. Default rates remain contained at ~1.5%. Total return
+      (price + div) should be close to the 7% running yield + small price gain
+      as credit spreads normalise post rate-peak.
+
+  # View 2: ARCC -- BDC benefits from higher spreads, manageable credit
+  - type: absolute
+    ticker: ARCC
+    expected_return: 0.095          # 9.5% annualised (div yield + modest price recovery)
+    confidence: 0.55
+    horizon_months: 12
+    rationale: >
+      ARCC portfolio is 70%+ floating-rate senior secured. As short-term rates
+      stay elevated, net investment income remains high. Market currently pricing
+      in excessive credit risk given ARCC's diversified 500+ borrower portfolio.
+      Price recovery from recent dip ($17.45 -> $19+ by year end) adds to yield.
+
+  # View 3: BKLN outperforms ARCC on a risk-adjusted basis over 6 months
+  - type: relative
+    ticker_long: BKLN
+    ticker_short: ARCC
+    expected_outperformance: 0.02   # 2% annualised outperformance
+    confidence: 0.45
+    horizon_months: 6
+    rationale: >
+      Near term, BKLN has lower duration and credit risk than ARCC.
+      If credit spreads widen (recession risk), ARCC equity tranche absorbs
+      losses first. BKLN senior secured position is more defensive.
+      This view is lower confidence -- both are income assets.
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  BL MODEL SETTINGS
+# ══════════════════════════════════════════════════════════════════════════════
+model:
+  tau: 0.05             # weight on prior uncertainty (1/T rule: 1/20=0.05)
+  enabled: true         # set false to disable BL entirely and use historical mu
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TEMPLATE (uncomment to add a new view)
+# ══════════════════════════════════════════════════════════════════════════════
+# - type: absolute
+#   ticker: BKLN
+#   expected_return: 0.08
+#   confidence: 0.60
+#   horizon_months: 12
+#   rationale: "Your reasoning here"
