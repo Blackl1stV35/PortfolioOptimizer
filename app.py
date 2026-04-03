@@ -269,30 +269,18 @@ with st.sidebar:
 ], label_visibility="collapsed")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE: Macro Pulse
+# ROUTING ENGINE 
 # ══════════════════════════════════════════════════════════════════════════════
 
 if page == "📡 Macro Pulse":
-    from engine.macro_monitor import get_macro_data, get_macro_regime, get_risk_gauges
-    # The full page logic lives in pages/03_Macro_Pulse.py
-    # If using multi-page Streamlit, the sidebar link handles routing automatically.
-    # If using single-file app.py, paste the tab body from pages/03_Macro_Pulse.py here.
-    st.switch_page("pages/03_Macro_Pulse.py")
-    st.divider()
-    if st.button("Clear cache"):
-        st.cache_data.clear(); st.rerun()
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: SEC Intelligence
-# ══════════════════════════════════════════════════════════════════════════════
+    from modules import macro_pulse
+    macro_pulse.render_page()
 
 elif page == "📋 SEC Intelligence":
-    st.switch_page("pages/04_SEC_Intelligence.py")
+    from modules import sec_intelligence
+    sec_intelligence.render_page()
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: DASHBOARD
-# ══════════════════════════════════════════════════════════════════════════════
-if page == "📊 Dashboard":
+elif page == "📊 Dashboard":
     st.title("Portfolio Dashboard")
     snap = cfg.get("ks_app_snapshot_20260327", {})
 
