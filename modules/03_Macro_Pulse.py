@@ -186,7 +186,7 @@ with tab1:
 
     c1, c2 = st.columns(2)
     with c1:
-        irx = macro["liquidity"].get("series", pd.Series(dtype=float))
+        irx = macro["liquidity"].get("series", pd.Series(dtype=float.iloc[-1]))
         if not irx.empty:
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=irx.index, y=irx.values,
@@ -219,7 +219,7 @@ with tab1:
 
     # Yield curve
     st.subheader("US yield curve (2Y vs 10Y)")
-    if not yc.get("series_spread", pd.Series(dtype=float)).empty:
+    if not yc.get("series_spread", pd.Series(dtype=float.iloc[-1])).empty:
         sp = yc["series_spread"]
         fig3 = go.Figure()
         fig3.add_trace(go.Scatter(x=sp.index, y=sp.values, mode="lines",
@@ -294,7 +294,7 @@ with tab3:
 
     with c1:
         # 10Y yield as inflation / growth proxy
-        t10 = yc.get("series_10y", pd.Series(dtype=float))
+        t10 = yc.get("series_10y", pd.Series(dtype=float.iloc[-1]))
         if not t10.empty:
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=t10.index, y=t10.values, mode="lines",
@@ -306,14 +306,14 @@ with tab3:
             st.caption("Rising 10Y yield → higher BKLN floating income; pressure on longer-duration assets")
 
     with c2:
-        oil_s = macro["oil"].get("series", pd.Series(dtype=float))
+        oil_s = macro["oil"].get("series", pd.Series(dtype=float.iloc[-1]))
         if not oil_s.empty:
             cur_o = float(oil_s.iloc[-1])
             color_o = "#E24B4A" if cur_o > 95 else ("#BA7517" if cur_o > 80 else "#1D9E75")
             fig2 = go.Figure()
             fig2.add_trace(go.Scatter(x=oil_s.index, y=oil_s.values, mode="lines",
                                       name="WTI Oil", line=dict(color=color_o, width=2),
-                                      fill="tozeroy", fillcolor=color_o.replace("#","rgba(").replace("2D","45,0.1)")))
+                                      fill="tozeroy", fillcolor="rgba(150, 150, 150, 0.1)"))
             fig2.add_hline(y=95, line_dash="dot", line_color="#E24B4A",
                            annotation_text="Defensive threshold $95")
             fig2.update_layout(title="WTI Oil ($/bbl)", height=240,
@@ -321,8 +321,8 @@ with tab3:
             st.plotly_chart(fig2, use_container_width=True)
 
     # HYG vs LQD
-    hy_s = macro["credit"].get("series_hy", pd.Series(dtype=float))
-    ig_s = macro["credit"].get("series_ig", pd.Series(dtype=float))
+    hy_s = macro["credit"].get("series_hy", pd.Series(dtype=float.iloc[-1]))
+    ig_s = macro["credit"].get("series_ig", pd.Series(dtype=float.iloc[-1]))
     if not hy_s.empty and not ig_s.empty:
         aligned = pd.DataFrame({"HYG (High Yield)": hy_s, "LQD (Inv Grade)": ig_s}).dropna()
         # Normalise to 100 at start
