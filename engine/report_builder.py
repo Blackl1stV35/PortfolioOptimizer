@@ -231,7 +231,21 @@ def build_report(
         r = 3+i; bg = BG1 if i%2==0 else BG2; rh(ws7, r, 19)
         wcell(ws7, r, 1, tkr, bold=True, bg=bg)
         for j, wdf in enumerate(w_dict.values()):
-            v = float(wdf.loc[tkr, "weights"]) if tkr in wdf.index else 0.0
+            if isinstance(wdf, dict):
+                # If it's a flat dictionary { 'AAPL': 0.5 }
+                if tkr in wdf and not isinstance(wdf[tkr], dict):
+                    v = float(wdf.get(tkr, 0.0))
+                # If it's a nested dictionary { 'AAPL': {'weights': 0.5} }
+                elif tkr in wdf and isinstance(wdf[tkr], dict):
+                    v = float(wdf[tkr].get("weights", 0.0))
+                # If it's oriented by column { 'weights': {'AAPL': 0.5} }
+                elif "weights" in wdf and isinstance(wdf["weights"], dict):
+                    v = float(wdf["weights"].get(tkr, 0.0))
+                else:
+                    v = 0.0
+            else:
+                # Original pandas logic
+                v = float(wdf.loc[tkr, "weights"]) if hasattr(wdf, "index") and tkr in wdf.index else 0.0
             wcell(ws7, r, 2+j, v, bg=bg, color=G if v > 0.35 else DARK, fmt="0.0%")
 
     # ── Sheet 8: Riskfolio Charts ────────────────────────────────────────────
