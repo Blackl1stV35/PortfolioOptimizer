@@ -13,7 +13,7 @@
 
 ## Backtest Results
 <p float="left">
-  <img src="PortfolioOptimizer/output/plots/backtest_equity.png" width="400"/>
+  <img src="output/plots/backtest_equity.png" width="400"/>
   <img src="PortfolioOptimizer/output/plots/backtest_sharpe.png" width="400"/>
 </p>
 
