@@ -12,27 +12,27 @@
 # Portfolio Optimizer Dashboard
 
 ## Backtest Results
-<p float="left">
-  <img src="/output/plots/backtest_equity.png" width="400"/>
-  <img src="/output/plots/backtest_sharpe.png" width="400"/>
-</p>
+<div style="display: flex; justify-content: space-around;">
+  <img src="/output/plots/backtest_equity.png" style="flex:1; max-width:48%; height:auto;"/>
+  <img src="/output/plots/backtest_sharpe.png" style="flex:1; max-width:48%; height:auto;"/>
+</div>
 
 ## FX Signal & Generational Plan
-<p float="left">
-  <img src="/output/plots/fx_signal.png" width="400"/>
-  <img src="/output/plots/generational_plan.png" width="400"/>
-</p>
+<div style="display: flex; justify-content: space-around;">
+  <img src="/output/plots/fx_signal.png" style="flex:1; max-width:48%; height:auto;"/>
+  <img src="/output/plots/generational_plan.png" style="flex:1; max-width:48%; height:auto;"/>
+</div>
 
 ## Distribution & Composition
-<p float="left">
-  <img src="/output/plots/hist.png" width="400"/>
-  <img src="/output/plots/pie.png" width="400"/>
-</p>
+<div style="display: flex; justify-content: space-around;">
+  <img src="/output/plots/hist.png" style="flex:1; max-width:48%; height:auto;"/>
+  <img src="/output/plots/pie.png" style="flex:1; max-width:48%; height:auto;"/>
+</div>
 
 ## Risk Contribution
-<p float="left">
-  <img src="/output/plots/risk_con.png" width="400"/>
-</p>
+<div style="display: flex; justify-content: center;">
+  <img src="/output/plots/risk_con.png" style="flex:1; max-width:60%; height:auto;"/>
+</div>
 
 ---
 
