@@ -186,7 +186,7 @@ with tab1:
 
     c1, c2 = st.columns(2)
     with c1:
-        irx = macro["liquidity"].get("series", pd.Series(dtype=float.iloc[-1]))
+        irx = macro["liquidity"].get("series", pd.Series(dtype=float))
         if not irx.empty:
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=irx.index, y=irx.values,
