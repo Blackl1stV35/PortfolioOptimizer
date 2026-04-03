@@ -16,8 +16,10 @@ Thai policy rate (BOT):
       thai_policy_rate_date: "2026-01-08"
       us_fed_rate: 3.625            # midpoint of Fed target range
       us_fed_rate_date: "2026-03-19"
+
 """
 
+import streamlit as st
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
@@ -57,7 +59,7 @@ def _ttl_set(key: str, data):
 
 
 # ── Raw fetch ─────────────────────────────────────────────────────────────────
-@_ttl_get.__class__.__call__  # just a reminder pattern, not actual decorator
+@st.cache_data(ttl=3600)
 def _fetch(ticker: str, period: str = "3mo") -> pd.Series:
     cached = _ttl_get(ticker)
     if cached is not None:
