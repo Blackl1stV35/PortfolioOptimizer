@@ -9,29 +9,50 @@
 
 ---
 
-# Portfolio Optimizer Dashboard
+# 📊 Portfolio Optimizer Dashboard
 
 ## Backtest Results
 <div style="display: flex; justify-content: space-around;">
-  <img src="/output/plots/backtest_equity.png" style="flex:1; max-width:48%; height:auto;"/>
-  <img src="/output/plots/backtest_sharpe.png" style="flex:1; max-width:48%; height:auto;"/>
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/backtest_equity.png" style="width:100%; height:auto;"/>
+    <figcaption>Walk-Forward Equity Curves</figcaption>
+  </figure>
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/backtest_sharpe.png" style="width:100%; height:auto;"/>
+    <figcaption>Rolling Sharpe Ratio</figcaption>
+  </figure>
 </div>
 
 ## FX Signal & Generational Plan
 <div style="display: flex; justify-content: space-around;">
-  <img src="/output/plots/fx_signal.png" style="flex:1; max-width:48%; height:auto;"/>
-  <img src="/output/plots/generational_plan.png" style="flex:1; max-width:48%; height:auto;"/>
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/fx_signal.png" style="width:100%; height:auto;"/>
+    <figcaption>USD/THB FX Signal</figcaption>
+  </figure>
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/generational_plan.png" style="width:100%; height:auto;"/>
+    <figcaption>Generational Wealth Plan</figcaption>
+  </figure>
 </div>
 
 ## Distribution & Composition
 <div style="display: flex; justify-content: space-around;">
-  <img src="/output/plots/hist.png" style="flex:1; max-width:48%; height:auto;"/>
-  <img src="/output/plots/pie.png" style="flex:1; max-width:48%; height:auto;"/>
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/hist.png" style="width:100%; height:auto;"/>
+    <figcaption>Portfolio Returns Histogram</figcaption>
+  </figure>
+  <figure style="flex:1; text-align:center; margin:10px;">
+    <img src="/output/plots/pie.png" style="width:100%; height:auto;"/>
+    <figcaption>Max Sharpe Allocation</figcaption>
+  </figure>
 </div>
 
 ## Risk Contribution
 <div style="display: flex; justify-content: center;">
-  <img src="/output/plots/risk_con.png" style="flex:1; max-width:60%; height:auto;"/>
+  <figure style="flex:1; text-align:center; margin:10px; max-width:60%;">
+    <img src="/output/plots/risk_con.png" style="width:100%; height:auto;"/>
+    <figcaption>Risk Contribution per Asset</figcaption>
+  </figure>
 </div>
 
 ---
