@@ -306,7 +306,7 @@ with tab3:
             st.caption("Rising 10Y yield → higher BKLN floating income; pressure on longer-duration assets")
 
     with c2:
-        oil_s = macro["oil"].get("series", pd.Series(dtype=float.iloc[-1]))
+        oil_s = macro["oil"].get("series", pd.Series(dtype=float))
         if not oil_s.empty:
             cur_o = float(oil_s.iloc[-1])
             color_o = "#E24B4A" if cur_o > 95 else ("#BA7517" if cur_o > 80 else "#1D9E75")
@@ -321,8 +321,8 @@ with tab3:
             st.plotly_chart(fig2, use_container_width=True)
 
     # HYG vs LQD
-    hy_s = macro["credit"].get("series_hy", pd.Series(dtype=float.iloc[-1]))
-    ig_s = macro["credit"].get("series_ig", pd.Series(dtype=float.iloc[-1]))
+    hy_s = macro["credit"].get("series_hy", pd.Series(dtype=float))
+    ig_s = macro["credit"].get("series_ig", pd.Series(dtype=float))
     if not hy_s.empty and not ig_s.empty:
         aligned = pd.DataFrame({"HYG (High Yield)": hy_s, "LQD (Inv Grade)": ig_s}).dropna()
         # Normalise to 100 at start
