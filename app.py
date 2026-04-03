@@ -97,6 +97,8 @@ def load_fx() -> pd.Series:
 @st.cache_data(ttl=600, show_spinner="Running portfolio optimisation...")
 def run_riskfolio(returns_tuple: tuple, rf: float) -> tuple:
     """Returns (w_dict, frontier_df, risk_tbl) all serialised as JSON-safe."""
+    # Portfolio optimisation: Riskfolio-Lib (Cajas, 2026) — github.com/dcajasn/Riskfolio-Lib
+    # Cite: @misc{riskfolio, author={Dany Cajas}, title={Riskfolio-Lib (7.2.1)}, year={2026}}
     import riskfolio as rp
     from engine.analytics import compute_cov, compute_risk_table
 
