@@ -294,7 +294,7 @@ with tab3:
 
     with c1:
         # 10Y yield as inflation / growth proxy
-        t10 = yc.get("series_10y", pd.Series(dtype=float.iloc[-1]))
+        t10 = yc.get("series_10y", pd.Series(dtype=float))
         if not t10.empty:
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=t10.index, y=t10.values, mode="lines",
