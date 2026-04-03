@@ -45,6 +45,8 @@ try:
 except ImportError:
     sys.exit("pyyaml not installed. Run: pip install pyyaml")
 
+# Portfolio optimisation: Riskfolio-Lib (Cajas, 2026) — github.com/dcajasn/Riskfolio-Lib
+# Cite: @misc{riskfolio, author={Dany Cajas}, title={Riskfolio-Lib (7.2.1)}, year={2026}}
 try:
     import riskfolio as rp
 except ImportError:
