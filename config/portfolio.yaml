@@ -44,12 +44,22 @@ analysis:
   notes: "Generational wealth strategy. BKLN is the income anchor (monthly float-rate),
           ARCC is the high-yield BDC satellite (quarterly). SDIV excluded."
 
+macro:
+  thai_policy_rate:      1.00          # BOT 1-day repo rate — update manually
+  thai_policy_rate_date: "2026-01-08"  # date of last BOT MPC meeting
+  us_fed_rate:           3.625         # Fed target midpoint (3.50-3.75%)
+  us_fed_rate_date:      "2026-03-19"  # date of last FOMC meeting
 
 cash:
   usd: 158.67           # USD cash in KS account as of 2026-03-27
-  thb: 0.00             # THB cash as of 2026-03-27
+  thb: 34215.06            # THB cash as of 2026-03-27
   total_deposited_usd: 6366.84   # all-time deposits per KS Financial report
 
+edgar:
+  identity: "peempeem2557@hotmail.com"    # SEC requires a courtesy user-agent header
+
+analysis:
+  cash_reserve_thb: 92000            # used by Macro Pulse cash recommendation
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  INSTRUMENT DEFINITIONS
