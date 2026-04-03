@@ -67,6 +67,50 @@ def addimg(ws, path_or_bytes, anchor, w=650, h=380):
     except Exception:
         pass
 
+def _add_macro_sheet(wb, macro: dict, regime: dict, gauges: dict):
+    """Add 'Macro Pulse' sheet to the Excel workbook."""
+    ws = wb.create_sheet("Macro Pulse")
+    ws.sheet_view.showGridLines = False
+    ws.sheet_properties.tabColor = "534AB7"
+
+    for i, w in enumerate([22, 22, 18, 14, 14, 14], 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    titrow(ws, 1, f"MACRO PULSE  --  Generated {macro.get('fetched_at','')}", ncols=6)
+
+    # Regime summary
+    hdrrow(ws, 2, ["Regime", "Score", "Cash %", "Cash Guidance", "Action", "Generated"])
+    rc = {"Defensive": R, "Neutral": A, "Aggressive": G}.get(regime.get("regime",""), DARK)
+    for c, v in enumerate([
+        regime.get("regime",""), str(regime.get("score","")) + "/10",
+        regime.get("cash_pct",""), regime.get("cash_thb_est",""),
+        regime.get("action",""), macro.get("fetched_at",""),
+    ], 1):
+        wcell(ws, 3, c, v, bold=(c == 1), color=("FFFFFF" if c == 1 else DARK),
+              bg=(rc if c == 1 else BG1))
+
+    # Key metrics table
+    rh(ws, 5, 22)
+    hdrrow(ws, 5, ["Indicator", "Value", "Signal", "Note", "", ""])
+    rows = [
+        ("Thai Policy Rate",    f"{macro['rates']['thai_rate']:.2f}%",    macro['rates']['thai_signal'],     f"as of {macro['rates']['thai_rate_date']}"),
+        ("US Fed Rate",         f"{macro['rates']['us_fed_rate']:.2f}%",  macro['rates']['us_signal'],       f"as of {macro['rates']['us_fed_date']}"),
+        ("VIX",                 f"{macro['vix'].get('current','n/a'):.1f}" if macro['vix'].get('current') else "n/a", macro['vix'].get('signal','unknown'), "30d change: " + (f"{macro['vix'].get('change_30d',0):+.1f}" if macro['vix'].get('change_30d') else "n/a")),
+        ("WTI Oil ($/bbl)",     f"${macro['oil'].get('current','n/a'):.2f}" if macro['oil'].get('current') else "n/a", macro['oil'].get('signal','unknown'), macro['oil'].get('geopolitical_note','')),
+        ("USD/THB FX Signal",   f"{macro['fx'].get('current',0):.4f}",    macro['fx'].get('signal','unknown'), macro['fx'].get('advice','')),
+        ("Recession Prob.",     f"~{macro['recession'].get('probability','?')}%", macro['recession'].get('signal','unknown'), macro['recession'].get('note','')),
+        ("2s10s Spread",        f"{macro['yield_curve'].get('spread_2s10s',0):+.3f}%" if macro['yield_curve'].get('spread_2s10s') is not None else "n/a", macro['yield_curve'].get('signal','unknown'), "Inverted" if macro['yield_curve'].get('inverted') else "Not inverted"),
+        ("Credit Risk Score",   f"{gauges.get('default_risk','?')}/100",  "red" if gauges.get('default_risk',0) > 65 else ("yellow" if gauges.get('default_risk',0) > 35 else "green"), "HYG vs LQD proxy"),
+    ]
+    sig_color = {"green": G, "yellow": A, "red": R, "unknown": "888888"}
+    for i, (ind, val, sig, note) in enumerate(rows):
+        r = 6 + i; bg = BG1 if i % 2 == 0 else BG2
+        wcell(ws, r, 1, ind, bold=True, bg=bg)
+        wcell(ws, r, 2, val, bg=bg)
+        sc = sig_color.get(sig, "888888")
+        xc = wcell(ws, r, 3, sig.upper(), bg=bg, color="FFFFFF")
+        xc.fill = _fill(sc); xc.font = Font(bold=True, color="FFFFFF", size=10, name="Arial")
+        wcell(ws, r, 4, note, bg=bg)
 
 def build_report(
     pnl_df:       pd.DataFrame,
@@ -299,5 +343,13 @@ def build_report(
     # Serialise to bytes
     buf = io.BytesIO()
     wb.save(buf)
+    try:
+        from engine.macro_monitor import get_macro_data, get_macro_regime, get_risk_gauges
+        _macro_data   = get_macro_data(cfg)
+        _macro_regime = get_macro_regime(_macro_data)
+        _macro_gauges = get_risk_gauges(_macro_data)
+        _add_macro_sheet(wb, _macro_data, _macro_regime, _macro_gauges)
+    except Exception as _me:
+        import logging; logging.getLogger(__name__).warning("Macro sheet skipped: %s", _me)
     buf.seek(0)
     return buf.read()
