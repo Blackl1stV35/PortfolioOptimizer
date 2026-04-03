@@ -346,6 +346,7 @@ Free, always-on, no credit card required.
 2. Sign in to [share.streamlit.io](https://share.streamlit.io) with GitHub
 3. Click **New app** → select your repository → Main file: `app.py` → Deploy
 4. App is live at `https://your-app-name.streamlit.app`
+👉 Demo instance (read-only): portfoliooptimizer-47hvefqgej5ujhtimvhwoo.streamlit.app
 
 To restrict access to yourself: Settings → Sharing → Viewers must be
 logged in → add your email address.
