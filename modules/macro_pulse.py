@@ -219,7 +219,7 @@ with tab1:
 
     # Yield curve
     st.subheader("US yield curve (2Y vs 10Y)")
-    if not yc.get("series_spread", pd.Series(dtype=float.iloc[-1])).empty:
+    if not yc.get("series_spread", pd.Series(dtype=float)).empty:
         sp = yc["series_spread"]
         fig3 = go.Figure()
         fig3.add_trace(go.Scatter(x=sp.index, y=sp.values, mode="lines",
