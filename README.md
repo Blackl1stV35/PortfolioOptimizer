@@ -351,4 +351,3 @@ K CYBER TRADE. The author is not a licensed financial advisor.
 ## License
 
 MIT — see `LICENSE`
-```
