@@ -13,25 +13,25 @@
 
 ## Backtest Results
 <p float="left">
-  <img src="output/plots/backtest_equity.png" width="400"/>
-  <img src="PortfolioOptimizer/output/plots/backtest_sharpe.png" width="400"/>
+  <img src="/output/plots/backtest_equity.png" width="400"/>
+  <img src="/output/plots/backtest_sharpe.png" width="400"/>
 </p>
 
 ## FX Signal & Generational Plan
 <p float="left">
-  <img src="PortfolioOptimizer/output/plots/fx_signal.png" width="400"/>
-  <img src="PortfolioOptimizer/output/plots/generational_plan.png" width="400"/>
+  <img src="/output/plots/fx_signal.png" width="400"/>
+  <img src="/output/plots/generational_plan.png" width="400"/>
 </p>
 
 ## Distribution & Composition
 <p float="left">
-  <img src="PortfolioOptimizer/output/plots/hist.png" width="400"/>
-  <img src="PortfolioOptimizer/output/plots/pie.png" width="400"/>
+  <img src="/output/plots/hist.png" width="400"/>
+  <img src="/output/plots/pie.png" width="400"/>
 </p>
 
 ## Risk Contribution
 <p float="left">
-  <img src="PortfolioOptimizer/output/plots/risk_con.png" width="400"/>
+  <img src="/output/plots/risk_con.png" width="400"/>
 </p>
 
 ---
