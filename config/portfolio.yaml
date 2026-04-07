@@ -197,6 +197,19 @@ transactions:
     total_usd: 147.44          
     note: "within buy zone, re-invest dividends"
 
+  - id: "T005"
+    date: "2026-04-07"
+    type: "BUY"
+    ticker: "PDI"
+    exchange: "XNYS"
+    currency: "USD"
+    shares: 105
+    price_usd: 17.40
+    gross_usd: 1827.00         
+    commission_usd: 5.34
+    total_usd: 1832.34          
+    note: "diversify instrument"
+
   # TEMPLATE for next trade (uncomment and fill):
   # - id: "T004"
   #   date: "YYYY-MM-DD"
