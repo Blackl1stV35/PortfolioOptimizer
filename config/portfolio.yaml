@@ -226,7 +226,7 @@ dividends_received:
     pay_date: "2025-12-30"             # estimated
     amount_per_share_usd: 0.101        # estimated
     gross_usd_estimated: 15.756
-    wht_rate_assumed: 0.30
+    wht_rate_assumed: 0.15
     net_usd_estimated: 11.029
     thb_ks_app: 421.54                 # from KS app screenshot (marked as estimate)
     source: "KS app estimate"
@@ -238,7 +238,7 @@ dividends_received:
     pay_date: "2026-01-27"             # estimated
     amount_per_share_usd: 0.101        # estimated
     gross_usd_estimated: 15.756
-    wht_rate_assumed: 0.30
+    wht_rate_assumed: 0.15
     net_usd_estimated: 11.029
     thb_ks_app: null                   # not broken down in app
     source: "KS app estimate (part of 2026 YTD total 1356.92 THB)"
@@ -250,7 +250,7 @@ dividends_received:
     pay_date: "2026-02-27"             # CONFIRMED
     amount_per_share_usd: 0.100        # CONFIRMED ($0.10/share)
     gross_usd_estimated: 15.60
-    wht_rate_assumed: 0.30
+    wht_rate_assumed: 0.15
     net_usd_estimated: 10.92
     thb_ks_app: null
     source: "KS app estimate (confirmed ex/pay dates via stockanalysis.com)"
@@ -262,7 +262,7 @@ dividends_received:
     pay_date: "2026-03-27"             # estimated
     amount_per_share_usd: 0.100        # estimated
     gross_usd_estimated: 15.60
-    wht_rate_assumed: 0.30
+    wht_rate_assumed: 0.15
     net_usd_estimated: 10.92
     thb_ks_app: null
     source: "Estimated -- not yet paid as of data_as_of date"
