@@ -148,6 +148,18 @@ transactions:
   commission_usd: 5.34
   total_usd: 147.44
   note: within buy zone, re-invest dividends
+- id: T005
+  date: '2026-04-01'
+  type: BUY
+  ticker: PDI
+  exchange: XNAS
+  currency: USD
+  shares: 105
+  price_usd: 17.4
+  gross_usd: 1827.0
+  commission_usd: 5.34
+  total_usd: 1832.34
+  note: diversify instrument
 dividends_received:
 - period: 2025-12
   ticker: BKLN
