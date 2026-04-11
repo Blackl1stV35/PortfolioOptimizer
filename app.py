@@ -37,6 +37,16 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Hide Streamlit's auto-discovered multi-page sidebar entries.
+# All navigation is handled by the custom 3-page st.sidebar.radio below.
+# pages/_*.py files are excluded by naming convention; this CSS hides the
+# residual [data-testid="stSidebarNav"] block that may appear on older versions.
+st.markdown("""
+<style>
+[data-testid="stSidebarNav"] { display: none !important; }
+</style>
+""", unsafe_allow_html=True)
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 CONFIG_FILE = ROOT / "config" / "portfolio.yaml"
 VIEWS_FILE  = ROOT / "config" / "views.yaml"
@@ -132,10 +142,18 @@ with st.sidebar:
         st.cache_data.clear()
         st.rerun()
 
-    # GitHub PAT status indicator
-    gh_cfg = cfg.get("github", {})
-    has_gh = bool(gh_cfg.get("pat") or
-                  __import__("os").environ.get("GITHUB_PAT"))
+    # GitHub PAT status indicator — check secrets.toml, env var, and yaml
+    def _has_pat() -> bool:
+        try:
+            if st.secrets.get("github", {}).get("pat"):
+                return True
+        except Exception:
+            pass
+        import os
+        if os.environ.get("GITHUB_PAT"):
+            return True
+        return bool(cfg.get("github", {}).get("pat"))
+    has_gh = _has_pat()
     st.caption(f"GitHub sync: {'✅ configured' if has_gh else '⚠️ not set'}")
 
 
@@ -751,10 +769,14 @@ elif page == "🧪 Analytics Engine":
                     vp_a, _ = result["mc_after"]
                     x = list(range(1, 61))
                     fig = go.Figure()
-                    for vp, name, color in [
-                        (vp_b, "Before", "#2E5BA8"),
-                        (vp_a, "After",  "#1D9E75"),
-                    ]:
+                    # Pre-defined solid hex colours + matching rgba fill colours
+                    _mc_palette = {
+                        "Before": {"line": "#2E5BA8", "fill": "rgba(46,91,168,0.12)"},
+                        "After":  {"line": "#1D9E75", "fill": "rgba(29,158,117,0.12)"},
+                    }
+                    for vp, name in [(vp_b, "Before"), (vp_a, "After")]:
+                        color      = _mc_palette[name]["line"]
+                        fill_color = _mc_palette[name]["fill"]
                         p50 = np.percentile(vp, 50, axis=0)
                         p10 = np.percentile(vp, 10, axis=0)
                         p90 = np.percentile(vp, 90, axis=0)
@@ -763,8 +785,8 @@ elif page == "🧪 Analytics Engine":
                         fig.add_trace(go.Scatter(x=x, y=p90.tolist(), name=f"{name} p90",
                                                   line=dict(color=color, width=0.8, dash="dot")))
                         fig.add_trace(go.Scatter(x=x, y=p10.tolist(), name=f"{name} p10",
-                                                  fill="tonexty" if name=="After" else None,
-                                                  fillcolor=color.replace("#","rgba(").replace("75","117,0.1)"),
+                                                  fill="tonexty",
+                                                  fillcolor=fill_color,
                                                   line=dict(color=color, width=0.8, dash="dot")))
                     fig.update_layout(height=360, margin=dict(l=0,r=0,t=10,b=0),
                                       xaxis_title="Month", yaxis_title="Portfolio Value ($)",

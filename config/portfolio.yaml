@@ -44,22 +44,12 @@ analysis:
   notes: "Generational wealth strategy. BKLN is the income anchor (monthly float-rate),
           ARCC is the high-yield BDC satellite (quarterly). SDIV excluded."
 
-macro:
-  thai_policy_rate:      1.00          # BOT 1-day repo rate — update manually
-  thai_policy_rate_date: "2026-01-08"  # date of last BOT MPC meeting
-  us_fed_rate:           3.625         # Fed target midpoint (3.50-3.75%)
-  us_fed_rate_date:      "2026-03-19"  # date of last FOMC meeting
 
 cash:
   usd: 158.67           # USD cash in KS account as of 2026-03-27
-  thb: 34215.06            # THB cash as of 2026-03-27
+  thb: 0.00             # THB cash as of 2026-03-27
   total_deposited_usd: 6366.84   # all-time deposits per KS Financial report
 
-edgar:
-  identity: "peempeem2557@hotmail.com"    # SEC requires a courtesy user-agent header
-
-analysis:
-  cash_reserve_thb: 92000            # used by Macro Pulse cash recommendation
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  INSTRUMENT DEFINITIONS
@@ -184,32 +174,6 @@ transactions:
     total_usd: 596.94         # confirmed KS app screenshot
     note: "DCA tranche -- total BKLN now 185 shares. Bought after Mar ex-div, eligible Apr onwards"
 
-  - id: "T004"
-    date: "2026-04-01"
-    type: "BUY"
-    ticker: "BKLN"
-    exchange: "ARCX"
-    currency: "USD"
-    shares: 7
-    price_usd: 20.30
-    gross_usd: 142.1         
-    commission_usd: 5.34
-    total_usd: 147.44          
-    note: "within buy zone, re-invest dividends"
-
-  - id: "T005"
-    date: "2026-04-07"
-    type: "BUY"
-    ticker: "PDI"
-    exchange: "XNYS"
-    currency: "USD"
-    shares: 105
-    price_usd: 17.40
-    gross_usd: 1827.00         
-    commission_usd: 5.34
-    total_usd: 1832.34          
-    note: "diversify instrument"
-
   # TEMPLATE for next trade (uncomment and fill):
   # - id: "T004"
   #   date: "YYYY-MM-DD"
@@ -239,7 +203,7 @@ dividends_received:
     pay_date: "2025-12-30"             # estimated
     amount_per_share_usd: 0.101        # estimated
     gross_usd_estimated: 15.756
-    wht_rate_assumed: 0.15
+    wht_rate_assumed: 0.30
     net_usd_estimated: 11.029
     thb_ks_app: 421.54                 # from KS app screenshot (marked as estimate)
     source: "KS app estimate"
@@ -251,7 +215,7 @@ dividends_received:
     pay_date: "2026-01-27"             # estimated
     amount_per_share_usd: 0.101        # estimated
     gross_usd_estimated: 15.756
-    wht_rate_assumed: 0.15
+    wht_rate_assumed: 0.30
     net_usd_estimated: 11.029
     thb_ks_app: null                   # not broken down in app
     source: "KS app estimate (part of 2026 YTD total 1356.92 THB)"
@@ -263,7 +227,7 @@ dividends_received:
     pay_date: "2026-02-27"             # CONFIRMED
     amount_per_share_usd: 0.100        # CONFIRMED ($0.10/share)
     gross_usd_estimated: 15.60
-    wht_rate_assumed: 0.15
+    wht_rate_assumed: 0.30
     net_usd_estimated: 10.92
     thb_ks_app: null
     source: "KS app estimate (confirmed ex/pay dates via stockanalysis.com)"
@@ -275,7 +239,7 @@ dividends_received:
     pay_date: "2026-03-27"             # estimated
     amount_per_share_usd: 0.100        # estimated
     gross_usd_estimated: 15.60
-    wht_rate_assumed: 0.15
+    wht_rate_assumed: 0.30
     net_usd_estimated: 10.92
     thb_ks_app: null
     source: "Estimated -- not yet paid as of data_as_of date"
