@@ -226,12 +226,12 @@ def build_report(
     for i in range(2, nc7+1): cw(ws7, i, 22)
     titrow(ws7, 1, "OPTIMAL PORTFOLIO WEIGHTS  --  All Strategies", ncols=nc7)
     hdrrow(ws7, 2, ["Asset"] + list(w_dict.keys()))
-    tickers_all = list(list(w_dict.values())[0].keys()) if w_dict else []
+    tickers_all = list(list(w_dict.values())[0].index) if w_dict else []
     for i, tkr in enumerate(tickers_all):
         r = 3+i; bg = BG1 if i%2==0 else BG2; rh(ws7, r, 19)
         wcell(ws7, r, 1, tkr, bold=True, bg=bg)
         for j, wdf in enumerate(w_dict.values()):
-            v = float(wdf.loc[tkr, "weights"]) if tkr in wdf.index else 0.0
+            v = float(wdf.get(tkr, 0.0))
             wcell(ws7, r, 2+j, v, bg=bg, color=G if v > 0.35 else DARK, fmt="0.0%")
 
     # ── Sheet 8: Riskfolio Charts ────────────────────────────────────────────
