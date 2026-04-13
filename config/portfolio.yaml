@@ -15,6 +15,8 @@ settings:
   data_history_start: '2022-01-01'
   frontier_points: 50
   report_auto_open: false
+edgar:
+  identity: "kanokphan.s@ku.th" 
 analysis:
   strategy: Aggressive Income Builder
   holding_period: indefinite_generational
@@ -160,6 +162,7 @@ transactions:
   commission_usd: 5.34
   total_usd: 1832.34
   note: diversify instrument
+
 dividends_received:
 - period: 2025-12
   ticker: BKLN
