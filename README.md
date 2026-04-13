@@ -3,10 +3,6 @@
 > Personal quantitative income portfolio research tool —  
 > built on Riskfolio-Lib, Python, Julia acceleration, SEC EDGAR intelligence, and macro monitoring.
 
-**Strategy:** Aggressive Income Builder · Indefinite / Generational Hold  
-**Holdings:** BKLN (Invesco Senior Loan ETF) · ARCC (Ares Capital Corp)  
-**Broker:** K CYBER TRADE — Kasikorn Securities · Account 397543-7
-
 ---
 
 ## Dashboard Preview
