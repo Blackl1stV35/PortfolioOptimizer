@@ -4,7 +4,7 @@ meta:
   broker: K CYBER TRADE (Kasikorn Securities)
   base_currency: USD
   reporting_currency: THB
-  data_as_of: '2026-04-11'
+  data_as_of: '2026-04-13'
   fx_source: BOT Weighted-average Interbank Exchange Rate
   fx_usd_thb: 32.68
 settings:
@@ -16,7 +16,7 @@ settings:
   frontier_points: 50
   report_auto_open: false
 edgar:
-  identity: "kanokphan.s@ku.th" 
+  identity: kanokphan.s@ku.th
 analysis:
   strategy: Aggressive Income Builder
   holding_period: indefinite_generational
@@ -162,7 +162,6 @@ transactions:
   commission_usd: 5.34
   total_usd: 1832.34
   note: diversify instrument
-
 dividends_received:
 - period: 2025-12
   ticker: BKLN
@@ -209,6 +208,18 @@ dividends_received:
   thb_ks_app: null
   source: Estimated -- not yet paid as of data_as_of date
   status: pending
+- period: '2026-03-25'
+  ticker: BKLN
+  shares_eligible: 192
+  ex_date: '2026-03-25'
+  pay_date: '2026-03-27'
+  amount_per_share_usd: 0.1
+  gross_usd_estimated: 19.2
+  wht_rate_assumed: 0.3
+  net_usd_estimated: 13.44
+  thb_ks_app: null
+  source: Dividend Calendar checklist
+  status: received
 ks_app_snapshot_20260327:
   market_value_thb: 198274.2
   total_cost_thb: 204235.24
