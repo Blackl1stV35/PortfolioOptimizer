@@ -29,6 +29,24 @@ import streamlit as st
 import yaml
 import yfinance as yf
 
+# ── Multi-account + Groq + Julia (patched) ────────────────────────────────────
+from pathlib import Path as _Path
+
+def _groq_available() -> bool:
+    try:
+        import streamlit as st
+        if st.secrets.get("groq", {}).get("api_key"): return True
+    except Exception: pass
+    import os
+    return bool(os.environ.get("GROQ_API_KEY"))
+
+def _julia_available() -> bool:
+    try:
+        from engine.julia_bridge import backend_info
+        return backend_info().get("julia_available", False)
+    except Exception: return False
+
+
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="PortfolioOptimizer",
@@ -48,21 +66,104 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-CONFIG_FILE = ROOT / "config" / "portfolio.yaml"
-VIEWS_FILE  = ROOT / "config" / "views.yaml"
+ACCOUNTS_FILE = ROOT / "config" / "accounts.yaml"
+VIEWS_FILE    = ROOT / "config" / "views.yaml"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# DATA HELPERS
+# MULTI-ACCOUNT SYSTEM
 # ══════════════════════════════════════════════════════════════════════════════
+@st.cache_data(ttl=300)
+def load_accounts() -> list[dict]:
+    """Load account registry from config/accounts.yaml."""
+    try:
+        with open(ACCOUNTS_FILE, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        return [a for a in data.get("accounts", []) if a.get("active", True)]
+    except FileNotFoundError:
+        # Fallback: single account from legacy portfolio.yaml
+        return [{
+            "id": "397543-7",
+            "display_name": "Kanokphan S.",
+            "broker": "K CYBER TRADE (Kasikorn Securities)",
+            "color": "#1A2E5C",
+            "accent": "#2E5BA8",
+            "yaml_file": "portfolio_397543-7.yaml",
+            "strategy": "Aggressive Income Builder",
+        }]
+
+
+def _account_yaml_path(account: dict) -> Path:
+    fname = account.get("yaml_file", f"portfolio_{account['id']}.yaml")
+    return ROOT / "config" / fname
+
+
+def _verify_pin(account_id: str, pin: str) -> bool:
+    """Check PIN from .streamlit/secrets.toml [account_pins]."""
+    if not pin:
+        return False
+    try:
+        import streamlit as st
+        stored = st.secrets.get("account_pins", {}).get(account_id, "")
+        if stored and str(stored) == str(pin):
+            return True
+    except Exception:
+        pass
+    # Dev fallback: any non-empty PIN passes if no secrets configured
+    try:
+        import streamlit as st
+        pins = st.secrets.get("account_pins", {})
+        if not pins:
+            return len(pin) >= 4   # dev mode: any 4+ digit PIN
+    except Exception:
+        return len(pin) >= 4
+    return False
+
+
+def get_active_account() -> dict:
+    """Return the currently selected account dict from session state."""
+    accounts = load_accounts()
+    active_id = st.session_state.get("active_account_id", accounts[0]["id"])
+    for a in accounts:
+        if a["id"] == active_id:
+            return a
+    return accounts[0]
+
+
 @st.cache_data(ttl=60)
-def load_cfg() -> dict:
-    with open(CONFIG_FILE, encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+def load_cfg(account_id: str = "") -> dict:
+    """Load portfolio YAML for the given account (or active account)."""
+    accounts = load_accounts()
+    if not account_id:
+        account_id = st.session_state.get("active_account_id", accounts[0]["id"])
+    for a in accounts:
+        if a["id"] == account_id:
+            path = _account_yaml_path(a)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    return yaml.safe_load(f) or {}
+            except FileNotFoundError:
+                # Legacy fallback
+                legacy = ROOT / "config" / "portfolio.yaml"
+                with open(legacy, encoding="utf-8") as f:
+                    return yaml.safe_load(f) or {}
+    return {}
 
 
-def save_cfg(cfg: dict):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+def save_cfg(cfg: dict, account_id: str = ""):
+    """Save portfolio YAML for the given account."""
+    accounts = load_accounts()
+    if not account_id:
+        account_id = st.session_state.get("active_account_id", accounts[0]["id"])
+    for a in accounts:
+        if a["id"] == account_id:
+            path = _account_yaml_path(a)
+            with open(path, "w", encoding="utf-8") as f:
+                yaml.dump(cfg, f, allow_unicode=True, sort_keys=False)
+            st.cache_data.clear()
+            return
+    # Legacy fallback
+    with open(ROOT / "config" / "portfolio.yaml", "w", encoding="utf-8") as f:
         yaml.dump(cfg, f, allow_unicode=True, sort_keys=False)
     st.cache_data.clear()
 
@@ -103,9 +204,16 @@ def _github_push(cfg: dict, action: str, extra: list = None):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PERSISTENT SIDEBAR
+# PERSISTENT SIDEBAR  (multi-account)
 # ══════════════════════════════════════════════════════════════════════════════
-cfg      = load_cfg()
+
+# ── Initialise session state ──────────────────────────────────────────────────
+_all_accounts = load_accounts()
+if "active_account_id" not in st.session_state:
+    st.session_state["active_account_id"] = _all_accounts[0]["id"]
+
+_active_acct = get_active_account()
+cfg      = load_cfg(_active_acct["id"])
 holdings = derive_holdings(cfg)
 fx_r     = cfg.get("meta", {}).get("fx_usd_thb", 32.68)
 wht      = cfg.get("settings", {}).get("wht_active", 0.30)
@@ -116,24 +224,56 @@ with st.sidebar:
     st.markdown("## 📊 PortfolioOptimizer")
     st.markdown("---")
 
-    # Account badge
-    meta = cfg.get("meta", {})
+    # ── Account badge + switcher ──────────────────────────────────────────────
+    _color  = _active_acct.get("color", "#1A2E5C")
+    _meta   = cfg.get("meta", {})
     st.markdown(f"""
-<div style='background:#1A2E5C;border-radius:8px;padding:10px 14px;margin-bottom:8px'>
+<div style='background:{_color};border-radius:8px;padding:10px 14px;margin-bottom:8px'>
   <div style='color:#aab8d8;font-size:11px;font-weight:600;letter-spacing:.06em'>ACCOUNT</div>
-  <div style='color:#fff;font-size:15px;font-weight:700'>{meta.get('account_id','397543-7')}</div>
-  <div style='color:#7a9ccf;font-size:11px'>K CYBER TRADE (Kasikorn Securities)</div>
+  <div style='color:#fff;font-size:15px;font-weight:700'>{_active_acct["id"]}</div>
+  <div style='color:#b0c4e0;font-size:11px'>{_active_acct.get("display_name","")}</div>
+  <div style='color:#7a9ccf;font-size:11px'>{_active_acct.get("broker","")}</div>
 </div>
 """, unsafe_allow_html=True)
 
-    st.caption(f"Data as of: {meta.get('data_as_of','—')}")
+    st.caption(f"Data as of: {_meta.get('data_as_of','—')}")
     st.caption(f"FX: {fx_r:.4f} THB/USD  |  WHT: {wht*100:.0f}%")
+
+    # Account switcher (only if multiple accounts exist)
+    if len(_all_accounts) > 1:
+        with st.expander("🔄 Switch Account", expanded=False):
+            _switch_to = st.selectbox(
+                "Account",
+                options=[a["id"] for a in _all_accounts],
+                index=next(i for i,a in enumerate(_all_accounts) if a["id"] == _active_acct["id"]),
+                format_func=lambda aid: next(
+                    (f"{a['id']} — {a['display_name']}" for a in _all_accounts if a["id"] == aid),
+                    aid
+                ),
+                key="account_switcher",
+                label_visibility="collapsed",
+            )
+            if _switch_to != _active_acct["id"]:
+                _pin = st.text_input("PIN for this account", type="password",
+                                     placeholder="4-digit PIN", key="switch_pin")
+                if st.button("Unlock", key="unlock_btn"):
+                    if _verify_pin(_switch_to, _pin):
+                        st.session_state["active_account_id"] = _switch_to
+                        st.cache_data.clear()
+                        st.rerun()
+                    else:
+                        st.error("Incorrect PIN")
+
     st.markdown("---")
 
-    # 3-page navigation (Priority 2)
+    # ── Navigation ────────────────────────────────────────────────────────────
+    _nav_options = ["📊 Dashboard", "🔍 Intelligence Hub", "🧪 Analytics Engine"]
+    if len(_all_accounts) > 1:
+        _nav_options.append("👨‍👩‍👧 Family Overview")
+
     page = st.radio(
         "Navigation",
-        options=["📊 Dashboard", "🔍 Intelligence Hub", "🧪 Analytics Engine"],
+        options=_nav_options,
         label_visibility="collapsed",
     )
 
@@ -142,19 +282,17 @@ with st.sidebar:
         st.cache_data.clear()
         st.rerun()
 
-    # GitHub PAT status indicator — check secrets.toml, env var, and yaml
+    # ── Status indicators ─────────────────────────────────────────────────────
     def _has_pat() -> bool:
         try:
-            if st.secrets.get("github", {}).get("pat"):
-                return True
-        except Exception:
-            pass
+            if st.secrets.get("github", {}).get("pat"): return True
+        except Exception: pass
         import os
-        if os.environ.get("GITHUB_PAT"):
-            return True
-        return bool(cfg.get("github", {}).get("pat"))
+        return bool(os.environ.get("GITHUB_PAT")) or bool(cfg.get("github", {}).get("pat"))
     has_gh = _has_pat()
-    st.caption(f"GitHub sync: {'✅ configured' if has_gh else '⚠️ not set'}")
+    st.caption(f"GitHub: {'✅' if has_gh else '⚠️ not set'}  |  "
+               f"AI: {'✅ Groq' if _groq_available() else '⚠️ no key'}  |  "
+               f"Julia: {'✅' if _julia_available() else '🐍 Python'}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -319,9 +457,9 @@ if page == "📊 Dashboard":
                         cfg_new.setdefault("dividends_received", []).append(new_div)
 
                     cfg_new["meta"]["data_as_of"] = str(date.today())
-                    save_cfg(cfg_new)
+                    save_cfg(cfg_new, _active_acct["id"])
 
-                    # GitHub auto-commit (Priority 4)
+                    # GitHub auto-commit
                     gh_result = _github_push(cfg_new, "dividend confirmed")
                     gh_msg = "✅ Pushed to GitHub" if gh_result["success"] else f"⚠️ GitHub: {gh_result.get('error','')}"
 
@@ -407,7 +545,7 @@ if page == "📊 Dashboard":
             cfg_new = dict(cfg)
             cfg_new.setdefault("transactions", []).append(new_tx)
             cfg_new["meta"]["data_as_of"] = str(date.today())
-            save_cfg(cfg_new)
+            save_cfg(cfg_new, _active_acct["id"])
 
             gh_result = _github_push(cfg_new, f"new trade {nid} {tx_type} {tx_ticker}")
             gh_msg = "✅ GitHub" if gh_result["success"] else f"⚠️ {gh_result.get('error','')[:60]}"
@@ -660,6 +798,14 @@ elif page == "🧪 Analytics Engine":
                         for t, v in ws.items(): row[t] = f"{v:.1%}"
                         w_rows.append(row)
                     st.dataframe(pd.DataFrame(w_rows), use_container_width=True, hide_index=True)
+                    try:
+                        from utils.llm_summarizer import summarise_risk, render_summary
+                        _risk_text = summarise_risk(
+                            risk_tbl.to_dict(orient="index"),
+                            w_dict.get("Max Sharpe", {}))
+                        render_summary(_risk_text, "risk_opt")
+                    except Exception:
+                        pass
             except Exception as e:
                 st.error(f"Optimisation error: {e}")
 
@@ -686,6 +832,12 @@ elif page == "🧪 Analytics Engine":
                     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
                     if bt.get("equity_chart"):
                         st.image(bt["equity_chart"], use_container_width=True)
+                    try:
+                        from utils.llm_summarizer import summarise_backtest, render_summary
+                        _bt_text = summarise_backtest(bt["metrics"])
+                        render_summary(_bt_text, "backtest")
+                    except Exception:
+                        pass
             except Exception as e:
                 st.error(f"Backtest error: {e}")
                 import traceback; st.code(traceback.format_exc())
@@ -699,29 +851,79 @@ elif page == "🧪 Analytics Engine":
         )
 
         with st.form("whatif_form"):
-            st.subheader("Candidate Positions")
-            c1,c2,c3 = st.columns(3)
-            wi_ticker  = c1.text_input("Ticker", "PDI").upper()
-            wi_usd     = c2.number_input("USD to deploy", min_value=0.0, value=2000.0, step=100.0)
-            wi_shares  = c3.number_input("OR specific shares (0 = use USD amount)",
-                                          min_value=0, value=0, step=1)
-            wi_max_wt  = st.slider("Max weight per ticker (0 = no limit)", 0.0, 1.0, 0.0, 0.05)
-            wi_submit  = st.form_submit_button("🔬 Run What-If Analysis", type="primary")
+            st.subheader("Candidate Positions (up to 3 tickers)")
+            # Row headers
+            _h1, _h2, _h3 = st.columns([2,2,2])
+            _h1.caption("Ticker"); _h2.caption("USD to deploy"); _h3.caption("Shares (0 = use USD)")
+            # Ticker rows
+            _r1c1, _r1c2, _r1c3 = st.columns([2,2,2])
+            wi_t1 = _r1c1.text_input("T1", "PDI", label_visibility="collapsed").upper().strip()
+            wi_u1 = _r1c2.number_input("U1", min_value=0.0, value=2000.0, step=100.0, label_visibility="collapsed")
+            wi_s1 = _r1c3.number_input("S1", min_value=0, value=0, label_visibility="collapsed")
+            _r2c1, _r2c2, _r2c3 = st.columns([2,2,2])
+            wi_t2 = _r2c1.text_input("T2", "", placeholder="optional", label_visibility="collapsed").upper().strip()
+            wi_u2 = _r2c2.number_input("U2", min_value=0.0, value=0.0, step=100.0, label_visibility="collapsed")
+            wi_s2 = _r2c3.number_input("S2", min_value=0, value=0, label_visibility="collapsed")
+            _r3c1, _r3c2, _r3c3 = st.columns([2,2,2])
+            wi_t3 = _r3c1.text_input("T3", "", placeholder="optional", label_visibility="collapsed").upper().strip()
+            wi_u3 = _r3c2.number_input("U3", min_value=0.0, value=0.0, step=100.0, label_visibility="collapsed")
+            wi_s3 = _r3c3.number_input("S3", min_value=0, value=0, label_visibility="collapsed")
 
-        if wi_submit and wi_ticker:
+            st.divider()
+            _fa, _fb, _fc = st.columns(3)
+            wi_max_wt     = _fa.slider("Max weight per ticker (0=no limit)", 0.0, 1.0, 0.0, 0.05)
+            wi_sensitivity = _fb.checkbox("±5% entry price sensitivity", value=False,
+                                           help="Run 3 sub-scenarios: base price, +5%, −5%")
+            wi_label      = _fc.text_input("Scenario label (optional)", "", placeholder="e.g. PDI 30%")
+            wi_submit     = st.form_submit_button("🔬 Run What-If Analysis", type="primary")
+
+        # Build the primary ticker name for confirm dialog
+        wi_ticker = wi_t1 if wi_t1 else ""
+
+        if wi_submit and wi_t1:
             from engine.scenario_analyzer import run_addition_scenario, apply_scenario_to_config
 
-            candidates = [{"ticker": wi_ticker,
-                            "usd_amount": wi_usd,
-                            "shares": int(wi_shares)}]
+            # Build multi-asset candidates list
+            _raw = [(wi_t1,wi_u1,wi_s1),(wi_t2,wi_u2,wi_s2),(wi_t3,wi_u3,wi_s3)]
+            candidates = [{"ticker":t,"usd_amount":float(u),"shares":int(s)}
+                           for t,u,s in _raw if t]
 
-            with st.spinner(f"Analysing adding {wi_ticker}..."):
-                result = run_addition_scenario(
-                    cfg=cfg,
-                    candidates=candidates,
-                    max_weight=wi_max_wt if wi_max_wt > 0 else None,
-                    mc_paths=3000, mc_months=60,
-                )
+            # Run base + optional ±5% sensitivity sub-scenarios
+            _price_mults = {"Base":1.0}
+            if wi_sensitivity:
+                _price_mults.update({"+5% entry":1.05, "−5% entry":0.95})
+
+            _all_results = {}
+            for _slabel, _mult in _price_mults.items():
+                _adj = [{"ticker":c["ticker"],
+                          "usd_amount": c["usd_amount"]/_mult if c["usd_amount"]>0 else 0,
+                          "shares": c["shares"]} for c in candidates]
+                _spinner = f"Analysing {', '.join(c['ticker'] for c in candidates)} ({_slabel})..."
+                with st.spinner(_spinner):
+                    _all_results[_slabel] = run_addition_scenario(
+                        cfg=cfg, candidates=_adj,
+                        max_weight=wi_max_wt if wi_max_wt > 0 else None,
+                        mc_paths=3000, mc_months=60,
+                    )
+
+            result = _all_results["Base"]
+
+            # ── Sensitivity comparison table (if enabled) ─────────────────────
+            if wi_sensitivity and len(_all_results) > 1:
+                st.subheader("Sensitivity Analysis — ±5% Entry Price")
+                _sens_rows = []
+                for _sl, _sr in _all_results.items():
+                    _d = _sr.get("delta", {})
+                    _sens_rows.append({
+                        "Scenario":     _sl,
+                        "ΔSharpe":      f"{_d.get('sharpe',0):+.3f}",
+                        "ΔAnn. Return": f"{_d.get('ann_return',0)*100:+.2f}%",
+                        "ΔCVaR":        f"{_d.get('cvar_95',0)*100:+.2f}%",
+                        "ΔIncome/mo":   f"${_sr.get('income_delta_usd',0):+.2f}",
+                        "Income after": f"${_sr.get('income_after_usd',0):.2f}",
+                    })
+                st.dataframe(pd.DataFrame(_sens_rows), use_container_width=True, hide_index=True)
+                st.divider()
 
             if result.get("error"):
                 st.error(result["error"])
@@ -744,6 +946,15 @@ elif page == "🧪 Analytics Engine":
                 c5.metric("Δ Monthly Income",
                            f"${result['income_delta_usd']:+.2f}/mo",
                            help="Estimated additional monthly dividend income")
+
+                # ── Groq AI executive summary ─────────────────────────────
+                try:
+                    from utils.llm_summarizer import summarise_whatif, render_summary
+                    _wi_text = summarise_whatif(result)
+                    render_summary(_wi_text, "whatif",
+                        regenerate_fn=lambda force=True: summarise_whatif(result, force=force))
+                except Exception:
+                    pass
 
                 # ── Before vs After weights ───────────────────────────────
                 st.subheader("Portfolio Weights: Before vs After")
@@ -796,17 +1007,19 @@ elif page == "🧪 Analytics Engine":
                 # ── Apply button ──────────────────────────────────────────
                 st.divider()
                 st.subheader("Apply to Portfolio")
+                _tickers_str = "+".join(c["ticker"] for c in candidates).upper()
+                _confirm_key = f"{_tickers_str} CONFIRMED"
                 confirm_txt = st.text_input(
-                    f'Type "{wi_ticker} CONFIRMED" to apply',
-                    placeholder=f"{wi_ticker} CONFIRMED",
+                    f'Type "{_confirm_key}" to apply',
+                    placeholder=_confirm_key,
                 )
                 if st.button("✅ Apply What-If to portfolio.yaml", type="primary"):
-                    if confirm_txt.strip().upper() == f"{wi_ticker} CONFIRMED":
+                    if confirm_txt.strip().upper() == _confirm_key:
                         cfg_new = apply_scenario_to_config(cfg, tx_prev)
-                        save_cfg(cfg_new)
-                        gh_result = _github_push(cfg_new, f"What-If applied: {wi_ticker}")
+                        save_cfg(cfg_new, _active_acct["id"])
+                        gh_result = _github_push(cfg_new, f"What-If applied: {_tickers_str}")
                         gh_msg = "✅ GitHub sync" if gh_result["success"] else f"⚠️ {gh_result.get('error','')[:60]}"
-                        st.success(f"✅ Transaction(s) appended to portfolio.yaml.  {gh_msg}")
+                        st.success(f"✅ Transaction(s) applied.  {gh_msg}")
                         st.rerun()
                     else:
                         st.error("Confirmation text doesn't match — not applied.")
@@ -831,7 +1044,12 @@ elif page == "🧪 Analytics Engine":
                 w = w_opt["weights"].values if w_opt is not None else np.ones(len(tickers))/len(tickers)
                 snap = cfg.get("ks_app_snapshot_20260327", {})
                 pv = float(snap.get("market_value_thb", 6338*fx_r)) / fx_r
-                vp, ip = monte_carlo(returns, w, 0.0707/12, pv, float(mo_add), n_paths, n_years*12)
+                try:
+                    from engine.julia_bridge import monte_carlo as _jl_mc
+                    vp, ip = _jl_mc(returns, w, 0.0707/12, pv, float(mo_add), n_paths, n_years*12)
+                except Exception:
+                    from engine.analytics import monte_carlo
+                    vp, ip = monte_carlo(returns, w, 0.0707/12, pv, float(mo_add), n_paths, n_years*12)
                 x = list(range(1, n_years*12+1))
                 p50 = np.percentile(vp,50,axis=0); p10 = np.percentile(vp,10,axis=0); p90 = np.percentile(vp,90,axis=0)
                 fig = go.Figure([
@@ -848,6 +1066,16 @@ elif page == "🧪 Analytics Engine":
                 c2.metric("p10 Final", f"${np.percentile(vp[:,-1],10):,.0f}")
                 c3.metric("p90 Final", f"${np.percentile(vp[:,-1],90):,.0f}")
                 c4.metric("p50 Income/mo", f"${np.percentile(vp[:,-1],50)*0.0707/12:,.2f}")
+                try:
+                    from utils.llm_summarizer import summarise_monte_carlo, render_summary
+                    _mc_text = summarise_monte_carlo(
+                        {"p50":float(np.percentile(vp[:,-1],50)),
+                         "p10":float(np.percentile(vp[:,-1],10)),
+                         "p90":float(np.percentile(vp[:,-1],90))},
+                        n_years, 1000.0)
+                    render_summary(_mc_text, "mc")
+                except Exception:
+                    pass
             except Exception as e:
                 st.error(f"MC error: {e}")
                 import traceback; st.code(traceback.format_exc())
@@ -872,8 +1100,34 @@ elif page == "🧪 Analytics Engine":
                 plan = GenPlanConfig(n_paths=5000, horizon_years=30,
                                       monthly_add_usd=float(mo_dca),
                                       target_income_m=float(target), initial_value=pv)
-                with st.spinner("Running 5,000 paths × 360 months..."):
-                    result = run_generational_plan(returns, w, cfg, plan)
+                with st.spinner("Running 5,000 paths × 360 months (Julia-accelerated)..."):
+                    try:
+                        from engine.julia_bridge import generational_plan as _jl_gp
+                        _pr = returns.values @ w
+                        _gp = _jl_gp(float(_pr.mean()), float(_pr.std()),
+                                      float(pv), float(mo_dca), 5000, 0.0707/12, float(target))
+                        # Normalise Julia output to match Python planner format
+                        _ms_raw = _gp.get("milestones", {})
+                        _ms = {}
+                        for k, v in _ms_raw.items():
+                            yr = int(k) if str(k).isdigit() else int(str(k).replace("Year ","").strip())
+                            _ms[f"Year {yr}"] = {
+                                "p10_value":       float(v.get("p10_value",0)),
+                                "p50_value":       float(v.get("p50_value",0)),
+                                "p90_value":       float(v.get("p90_value",0)),
+                                "p50_income_m":    float(v.get("p50_income_m",0)),
+                                "prob_above_target":float(v.get("prob_above_target",0)),
+                            }
+                        result = {
+                            "milestones": _ms,
+                            "months_to_target": {
+                                "years":       int(_gp.get("years_to_target",0)),
+                                "extra_months":int(_gp.get("extra_months",0)),
+                            },
+                            "chart_bytes": None,
+                        }
+                    except Exception:
+                        result = run_generational_plan(returns, w, cfg, plan)
                 ms_rows = [{"Year": yr,
                              "p10 Value": f"${ms['p10_value']:,.0f}",
                              "p50 Value": f"${ms['p50_value']:,.0f}",
@@ -887,6 +1141,15 @@ elif page == "🧪 Analytics Engine":
                     st.success(f"Median time to ${target:,}/mo: {mtt['years']} years {mtt['extra_months']} months")
                 if result.get("chart_bytes"):
                     st.image(result["chart_bytes"], use_container_width=True)
+                try:
+                    from utils.llm_summarizer import summarise_generational, render_summary
+                    _gen_text = summarise_generational(
+                        result.get("milestones",{}),
+                        result.get("months_to_target",{}),
+                        float(target))
+                    render_summary(_gen_text, "gen_plan")
+                except Exception:
+                    pass
             except Exception as e:
                 st.error(f"Generational plan error: {e}")
                 import traceback; st.code(traceback.format_exc())
@@ -972,3 +1235,70 @@ elif page == "🧪 Analytics Engine":
             except Exception as e:
                 st.error(f"Report error: {e}")
                 import traceback; st.code(traceback.format_exc())
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 4: FAMILY OVERVIEW  (multi-account consolidated view)
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "\U0001f468\u200d\U0001f469\u200d\U0001f467 Family Overview":
+
+    st.subheader("\U0001f468\u200d\U0001f469\u200d\U0001f467 Family Portfolio Overview")
+    st.caption("Consolidated view across all accounts. Add accounts in config/accounts.yaml.")
+
+    _family_rows = []
+    _total_mkt_usd = 0.0; _total_income_mo = 0.0
+    _YIELDS = {"BKLN":0.0707,"ARCC":0.1066,"PDI":0.152,"MAIN":0.076,"HTGC":0.12}
+
+    for _acct in _all_accounts:
+        try:
+            _acfg  = load_cfg(_acct["id"])
+            _ahold = derive_holdings(_acfg)
+            _afx   = _acfg.get("meta",{}).get("fx_usd_thb", 32.68)
+            _awht  = _acfg.get("settings",{}).get("wht_active", 0.30)
+            if not _ahold:
+                continue
+            _atickers = tuple(sorted(_ahold.keys()))
+            try:
+                _aprices = load_prices(_atickers)
+                _amkt = sum(_ahold[t]["shares"] * float(_aprices[t].iloc[-1])
+                            for t in _atickers if t in _aprices.columns)
+            except Exception:
+                _amkt = sum(_ahold[t]["shares"] * _ahold[t]["avg_cost"] for t in _atickers)
+            _aincome_net = sum(
+                _ahold[t]["shares"] * _ahold[t]["avg_cost"] * _YIELDS.get(t,0.08) / 12
+                for t in _atickers) * (1 - _awht)
+            _snap = _acfg.get("ks_app_snapshot_20260327", {})
+            _total_mkt_usd += _amkt; _total_income_mo += _aincome_net
+            _family_rows.append({
+                "Account":       _acct["id"],
+                "Holder":        _acct.get("display_name",""),
+                "Holdings":      ", ".join(_atickers),
+                "Mkt Value ($)": f"${_amkt:,.0f}",
+                "Mkt Value (฿)": f"\u0e3f{_amkt*_afx:,.0f}",
+                "Income/mo (net)":f"${_aincome_net:.2f}",
+                "Dividends (฿)": f"\u0e3f{_snap.get('total_dividends_thb',0):,.2f}",
+            })
+        except Exception as _e:
+            _family_rows.append({"Account":_acct["id"],"Holder":"—","Holdings":f"Error: {_e}",
+                                  "Mkt Value ($)":"—","Mkt Value (฿)":"—",
+                                  "Income/mo (net)":"—","Dividends (฿)":"—"})
+
+    if _family_rows:
+        _c1,_c2,_c3,_c4 = st.columns(4)
+        _c1.metric("Total Family NAV", f"${_total_mkt_usd:,.0f}", f"\u0e3f{_total_mkt_usd*fx_r:,.0f}")
+        _c2.metric("Combined Income/mo", f"${_total_income_mo:.2f}", "net after WHT")
+        _c3.metric("Accounts", str(len(_all_accounts)))
+        _c4.metric("Annual income est.", f"${_total_income_mo*12:,.0f}")
+        st.divider()
+        st.dataframe(pd.DataFrame(_family_rows), use_container_width=True, hide_index=True)
+        if len(_family_rows) > 1:
+            _vals = [float(r["Income/mo (net)"].replace("$","")) for r in _family_rows]
+            _fig = go.Figure(go.Bar(
+                x=[r["Account"] for r in _family_rows], y=_vals,
+                text=[f"${v:.2f}/mo" for v in _vals], textposition="auto",
+                marker_color=[a.get("accent","#2E5BA8") for a in _all_accounts[:len(_family_rows)]]))
+            _fig.update_layout(title="Monthly income by account", height=260,
+                               margin=dict(l=0,r=0,t=30,b=0), yaxis_title="USD/month")
+            st.plotly_chart(_fig, use_container_width=True)
+    else:
+        st.info("No accounts with holdings found. Check config/accounts.yaml.")

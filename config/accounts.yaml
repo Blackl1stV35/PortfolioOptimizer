@@ -1,0 +1,34 @@
+# config/accounts.yaml
+# =====================
+# Registry of all portfolio accounts managed by this app.
+# PINs are stored in .streamlit/secrets.toml under [account_pins]
+# — never here. This file is safe to commit.
+#
+# To add a new account:
+#   1. Add an entry here
+#   2. Create config/portfolio_<id>.yaml (copy from portfolio_397543-7.yaml)
+#   3. Add the PIN in .streamlit/secrets.toml: [account_pins] "<id>" = "XXXX"
+
+accounts:
+  - id: "397543-7"
+    display_name: "Kanokphan S."
+    broker: "K CYBER TRADE (Kasikorn Securities)"
+    color: "#1A2E5C"           # badge background colour
+    accent: "#2E5BA8"          # chart accent colour
+    yaml_file: "portfolio_397543-7.yaml"
+    strategy: "Aggressive Income Builder"
+    base_currency: "USD"
+    reporting_currency: "THB"
+    active: true
+
+# Example second account — copy and fill in:
+# - id: "new-account-002"
+#   display_name: "Family Member"
+#   broker: "Another Broker"
+#   color: "#2D6A4F"
+#   accent: "#40916C"
+#   yaml_file: "portfolio_new-account-002.yaml"
+#   strategy: "Conservative Income"
+#   base_currency: "USD"
+#   reporting_currency: "THB"
+#   active: true
