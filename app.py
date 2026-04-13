@@ -343,13 +343,6 @@ if page == "📊 Dashboard":
                 })
             st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
-            # ARCC missed dividend alert
-            st.warning(
-                "⚠️  **ARCC Q1 2026 dividend MISSED** — bought 2026-03-25, "
-                "ex-date was 2026-03-12.  "
-                "Next: Q2 2026 est. ex ~2026-06-12 · 133 shares × $0.48 = **$63.84 gross**"
-            )
-
     # ── Tab 2: Price & History ────────────────────────────────────────────────
     with tab_ph:
         st.subheader("Price History (6 months)")
