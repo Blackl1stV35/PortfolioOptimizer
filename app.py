@@ -341,7 +341,7 @@ if page == "📊 Dashboard":
                     "P&L THB":  f"฿{unr*fx_r:+,.0f}",
                     "P&L %":    f"{unr/h['total_cost']*100:+.2f}%",
                 })
-            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
             # ARCC missed dividend alert
             st.warning(
@@ -366,7 +366,7 @@ if page == "📊 Dashboard":
                     ))
             fig.update_layout(height=320, margin=dict(l=0,r=0,t=0,b=0),
                                legend=dict(orientation="h"), yaxis_title="Price (USD)")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
             # Monthly returns
             monthly = prices.resample("ME").last().pct_change().dropna()
@@ -378,7 +378,7 @@ if page == "📊 Dashboard":
                                           name=tkr, marker_color=colors.get(tkr,"#888")))
                 fig2.update_layout(height=260, margin=dict(l=0,r=0,t=0,b=0),
                                    barmode="group", yaxis_title="%")
-                st.plotly_chart(fig2, use_container_width=True)
+                st.plotly_chart(fig2, width="stretch")
 
     # ── Tab 3: Dividend Calendar (smart checklist) ────────────────────────────
     with tab_dc:
@@ -424,7 +424,7 @@ if page == "📊 Dashboard":
                 },
                 disabled=["Ticker","Period","Ex-date","Pay-date","Shares",
                            "$/share","Gross $","Net @30%","Net @15%","Status"],
-                use_container_width=True, hide_index=True,
+                width="stretch", hide_index=True,
                 key="div_editor",
             )
 
@@ -476,7 +476,13 @@ if page == "📊 Dashboard":
             hdf = pd.DataFrame(hist)[["period","ticker","shares_eligible","amount_per_share_usd",
                                        "gross_usd_estimated","thb_ks_app","status"]]
             hdf.columns = ["Period","Ticker","Shares","$/share","Gross $","KS THB","Status"]
-            st.dataframe(hdf, use_container_width=True, hide_index=True)
+            # Bug 1 fix: replace None / em-dash with np.nan so PyArrow doesn't crash
+            hdf["KS THB"] = (
+                hdf["KS THB"]
+                .replace({None: np.nan, "—": np.nan, "null": np.nan, "": np.nan})
+                .pipe(pd.to_numeric, errors="coerce")
+            )
+            st.dataframe(hdf, width="stretch", hide_index=True)
         else:
             st.info("No dividends recorded yet.")
 
@@ -496,10 +502,11 @@ if page == "📊 Dashboard":
             if records:
                 rows = [{"Period":r.period,"Ticker":r.ticker,"Gross $":f"${r.gross_usd:.4f}",
                          "Net @30%":f"${r.net_30pct:.4f}","Net @15%":f"${r.net_15pct:.4f}",
-                         "KS THB":r.ks_thb or "—",
+                         # Bug 1 fix: use np.nan not "—" so PyArrow can infer float column
+                         "KS THB": float(r.ks_thb) if r.ks_thb is not None else np.nan,
                          "Implied WHT":f"{r.implied_wht*100:.1f}%" if r.implied_wht else "n/a",
                          "Verdict":r.verdict} for r in records]
-                st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
         except Exception as e:
             st.error(f"WHT module error: {e}")
 
@@ -511,7 +518,7 @@ if page == "📊 Dashboard":
         st.subheader("Transaction Ledger")
         txns = cfg.get("transactions", [])
         if txns:
-            st.dataframe(pd.DataFrame(txns), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(txns), width="stretch", hide_index=True)
         else:
             st.info("No transactions recorded.")
 
@@ -619,7 +626,7 @@ elif page == "🔍 Intelligence Hub":
                     with st.spinner("Fetching ARCC 8-K filings..."):
                         divs = get_arcc_dividend_declarations(identity)
                     if divs:
-                        st.dataframe(pd.DataFrame(divs), use_container_width=True, hide_index=True)
+                        st.dataframe(pd.DataFrame(divs), width="stretch", hide_index=True)
                     else:
                         st.info("No recent ARCC dividend declarations found (last 90 days).")
                 except Exception as e:
@@ -656,7 +663,7 @@ elif page == "🔍 Intelligence Hub":
                     if trades:
                         df = pd.DataFrame(trades)
                         df["value"] = df["value"].apply(lambda x: f"${x:,.0f}")
-                        st.dataframe(df, use_container_width=True, hide_index=True)
+                        st.dataframe(df, width="stretch", hide_index=True)
                         buys = [t for t in trades if t["type"]=="BUY"]
                         if buys: st.success(f"{len(buys)} open-market insider purchase(s) — management conviction signal")
                     else:
@@ -716,7 +723,7 @@ elif page == "🔍 Intelligence Hub":
             fig.add_trace(go.Scatter(x=roll.mean().index, y=roll.mean().values,
                                       name="90d mean", line=dict(color="#888",dash="dash")))
             fig.update_layout(height=280, margin=dict(l=0,r=0,t=0,b=0))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
             budget_thb = st.slider("THB to convert", 10000, 200000, 51000, 1000)
             usd_gross  = budget_thb / signal["current"]
@@ -769,7 +776,7 @@ elif page == "🧪 Analytics Engine":
                 for col, fmt in fmt_map.items():
                     if col in disp.columns:
                         disp[col] = disp[col].apply(lambda x: fmt.format(x) if pd.notna(x) else "n/a")
-                st.dataframe(disp, use_container_width=True)
+                st.dataframe(disp, width="stretch")
 
                 # Optimal weights
                 port = rp.Portfolio(returns=returns)
@@ -797,7 +804,7 @@ elif page == "🧪 Analytics Engine":
                         row = {"Strategy": strat}
                         for t, v in ws.items(): row[t] = f"{v:.1%}"
                         w_rows.append(row)
-                    st.dataframe(pd.DataFrame(w_rows), use_container_width=True, hide_index=True)
+                    st.dataframe(pd.DataFrame(w_rows), width="stretch", hide_index=True)
                     try:
                         from utils.llm_summarizer import summarise_risk, render_summary
                         _risk_text = summarise_risk(
@@ -829,7 +836,7 @@ elif page == "🧪 Analytics Engine":
                              "Max DD": f"{m['max_drawdown']*100:.2f}%",
                              "Final $1": f"${m['final_equity']:.3f}"}
                             for s,m in bt["metrics"].items()]
-                    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
                     if bt.get("equity_chart"):
                         st.image(bt["equity_chart"], use_container_width=True)
                     try:
@@ -922,7 +929,7 @@ elif page == "🧪 Analytics Engine":
                         "ΔIncome/mo":   f"${_sr.get('income_delta_usd',0):+.2f}",
                         "Income after": f"${_sr.get('income_after_usd',0):.2f}",
                     })
-                st.dataframe(pd.DataFrame(_sens_rows), use_container_width=True, hide_index=True)
+                st.dataframe(pd.DataFrame(_sens_rows), width="stretch", hide_index=True)
                 st.divider()
 
             if result.get("error"):
@@ -966,12 +973,12 @@ elif page == "🧪 Analytics Engine":
                     "After":   [f"{aw.get(t,0):.1%}" for t in all_t],
                     "Δ Weight":[f"{(aw.get(t,0)-bw.get(t,0))*100:+.1f}%" for t in all_t],
                 })
-                st.dataframe(wdf, use_container_width=True, hide_index=True)
+                st.dataframe(wdf, width="stretch", hide_index=True)
 
                 # ── Transaction preview ───────────────────────────────────
                 st.subheader("Proposed Transactions")
                 tx_prev = result["transactions_preview"]
-                st.dataframe(pd.DataFrame(tx_prev), use_container_width=True, hide_index=True)
+                st.dataframe(pd.DataFrame(tx_prev), width="stretch", hide_index=True)
 
                 # ── Monte Carlo fan chart ─────────────────────────────────
                 if result.get("mc_before") and result.get("mc_after"):
@@ -1002,7 +1009,7 @@ elif page == "🧪 Analytics Engine":
                     fig.update_layout(height=360, margin=dict(l=0,r=0,t=10,b=0),
                                       xaxis_title="Month", yaxis_title="Portfolio Value ($)",
                                       legend=dict(orientation="h"))
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width="stretch")
 
                 # ── Apply button ──────────────────────────────────────────
                 st.divider()
@@ -1039,9 +1046,18 @@ elif page == "🧪 Analytics Engine":
                 returns = _get_returns(tickers)
                 port = rp.Portfolio(returns=returns)
                 port.assets_stats(method_mu="hist", method_cov="ledoit")
-                w_opt = port.optimization(model="Classic", rm="MV", obj="Sharpe",
-                                           rf=rf_ann/12, l=2, hist=True)
-                w = w_opt["weights"].values if w_opt is not None else np.ones(len(tickers))/len(tickers)
+                # Fix 3: guard solver failure with EW fallback
+                try:
+                    w_opt = port.optimization(model="Classic", rm="MV", obj="Sharpe",
+                                               rf=rf_ann/12, l=2, hist=True)
+                    if w_opt is None or w_opt.isnull().values.any():
+                        raise ValueError("Solver returned null weights")
+                    w = w_opt["weights"].values
+                except Exception as _opt_exc:
+                    import logging as _lg
+                    _lg.getLogger(__name__).warning(
+                        "Riskfolio solver failed (%s) — falling back to Equal Weight", _opt_exc)
+                    w = np.ones(len(returns.columns)) / len(returns.columns)
                 snap = cfg.get("ks_app_snapshot_20260327", {})
                 pv = float(snap.get("market_value_thb", 6338*fx_r)) / fx_r
                 try:
@@ -1060,7 +1076,7 @@ elif page == "🧪 Analytics Engine":
                 ])
                 fig.update_layout(title="Portfolio value",height=340,
                                   xaxis_title="Month",yaxis_title="USD",margin=dict(l=0,r=0,t=30,b=0))
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
                 c1,c2,c3,c4 = st.columns(4)
                 c1.metric("p50 Final", f"${np.percentile(vp[:,-1],50):,.0f}")
                 c2.metric("p10 Final", f"${np.percentile(vp[:,-1],10):,.0f}")
@@ -1093,8 +1109,18 @@ elif page == "🧪 Analytics Engine":
                 returns = _get_returns(tickers)
                 port = rp.Portfolio(returns=returns)
                 port.assets_stats(method_mu="hist", method_cov="ledoit")
-                w_opt = port.optimization(model="Classic",rm="MV",obj="Sharpe",rf=rf_ann/12,l=2,hist=True)
-                w = w_opt["weights"].values if w_opt is not None else np.ones(len(tickers))/len(tickers)
+                # Fix 3: guard solver failure with EW fallback
+                try:
+                    w_opt = port.optimization(model="Classic", rm="MV", obj="Sharpe",
+                                               rf=rf_ann/12, l=2, hist=True)
+                    if w_opt is None or w_opt.isnull().values.any():
+                        raise ValueError("Solver returned null weights")
+                    w = w_opt["weights"].values
+                except Exception as _opt_exc:
+                    import logging as _lg
+                    _lg.getLogger(__name__).warning(
+                        "Riskfolio solver failed (%s) — falling back to Equal Weight", _opt_exc)
+                    w = np.ones(len(returns.columns)) / len(returns.columns)
                 snap = cfg.get("ks_app_snapshot_20260327", {})
                 pv = float(snap.get("market_value_thb", 6338*fx_r)) / fx_r
                 plan = GenPlanConfig(n_paths=5000, horizon_years=30,
@@ -1135,7 +1161,7 @@ elif page == "🧪 Analytics Engine":
                              "p50 Income/mo": f"${ms['p50_income_m']:,.2f}",
                              f"P(>${target:,.0f}/mo)": f"{ms['prob_above_target']:.1f}%"}
                             for yr, ms in result["milestones"].items()]
-                st.dataframe(pd.DataFrame(ms_rows), use_container_width=True, hide_index=True)
+                st.dataframe(pd.DataFrame(ms_rows), width="stretch", hide_index=True)
                 mtt = result.get("months_to_target", {})
                 if mtt.get("years"):
                     st.success(f"Median time to ${target:,}/mo: {mtt['years']} years {mtt['extra_months']} months")
@@ -1176,9 +1202,21 @@ elif page == "🧪 Analytics Engine":
 
                     port = rp.Portfolio(returns=returns)
                     port.assets_stats(method_mu="hist", method_cov="ledoit")
-                    w_opt = port.optimization(model="Classic",rm="MV",obj="Sharpe",rf=rf_ann/12,l=2,hist=True)
-                    w_main = w_opt["weights"].values if w_opt is not None else np.ones(len(tickers))/len(tickers)
-                    w_dict = {"Max Sharpe": w_opt.to_dict()["weights"] if w_opt is not None else {t:1/len(tickers) for t in tickers}}
+                    # Fix 3: guard solver failure with EW fallback
+                    try:
+                        w_opt = port.optimization(model="Classic", rm="MV", obj="Sharpe",
+                                                   rf=rf_ann/12, l=2, hist=True)
+                        if w_opt is None or w_opt.isnull().values.any():
+                            raise ValueError("Solver returned null weights")
+                        w_main = w_opt["weights"].values
+                        w_dict = {"Max Sharpe": w_opt.to_dict()["weights"]}
+                    except Exception as _opt_exc:
+                        import logging as _lg
+                        _lg.getLogger(__name__).warning(
+                            "Riskfolio solver failed (%s) — falling back to Equal Weight", _opt_exc)
+                        _n = len(tickers)
+                        w_main = np.ones(_n) / _n
+                        w_dict = {"Equal Weight": {t: 1/_n for t in tickers}}
 
                     snap   = cfg.get("ks_app_snapshot_20260327", {})
                     pv     = float(snap.get("market_value_thb", 6338*fx_r)) / fx_r
@@ -1200,7 +1238,9 @@ elif page == "🧪 Analytics Engine":
                                           "Ex-date":d.get("ex_date",""),"Pay-date":d.get("pay_date",""),
                                           "Shares":sh,"$/share":pps,"Gross $":round(gross,2),
                                           "WHT":f"{wht*100:.0f}%","Net $":round(net,2),
-                                          "Net THB est":round(net*fx_r,0),"KS App THB":d.get("thb_ks_app","n/a"),
+                                          "Net THB est":round(net*fx_r,0),
+                                          # Bug 1 fix: np.nan not "n/a" for numeric column
+                                          "KS App THB": float(d["thb_ks_app"]) if d.get("thb_ks_app") is not None else np.nan,
                                           "Status":d.get("status","received")})
 
                     wht_records = build_reconciliation(cfg, fx_r)
@@ -1290,7 +1330,7 @@ elif page == "\U0001f468\u200d\U0001f469\u200d\U0001f467 Family Overview":
         _c3.metric("Accounts", str(len(_all_accounts)))
         _c4.metric("Annual income est.", f"${_total_income_mo*12:,.0f}")
         st.divider()
-        st.dataframe(pd.DataFrame(_family_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(_family_rows), width="stretch", hide_index=True)
         if len(_family_rows) > 1:
             _vals = [float(r["Income/mo (net)"].replace("$","")) for r in _family_rows]
             _fig = go.Figure(go.Bar(
@@ -1299,6 +1339,6 @@ elif page == "\U0001f468\u200d\U0001f469\u200d\U0001f467 Family Overview":
                 marker_color=[a.get("accent","#2E5BA8") for a in _all_accounts[:len(_family_rows)]]))
             _fig.update_layout(title="Monthly income by account", height=260,
                                margin=dict(l=0,r=0,t=30,b=0), yaxis_title="USD/month")
-            st.plotly_chart(_fig, use_container_width=True)
+            st.plotly_chart(_fig, width="stretch")
     else:
         st.info("No accounts with holdings found. Check config/accounts.yaml.")

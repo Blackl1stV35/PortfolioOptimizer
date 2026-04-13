@@ -1,14 +1,15 @@
-[server]
-headless = true
-enableCORS = false
-enableXsrfProtection = true
+# .streamlit/config.toml
+# ======================
+# Fix 5: enableCORS and enableXsrfProtection must agree.
+# Setting both to true is the secure default for Streamlit Community Cloud.
+# If you run behind a reverse proxy that sets its own CORS headers, you can
+# set enableCORS = false AND enableXsrfProtection = false together — but
+# never mix them (that is what triggered the warning).
 
-[theme]
-primaryColor = "#1D9E75"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F2F4F8"
-textColor = "#1A1A2E"
-font = "sans serif"
+[server]
+enableCORS            = true
+enableXsrfProtection  = true
 
 [browser]
+# Suppress the "Are you sure you want to leave?" dialog during development
 gatherUsageStats = false

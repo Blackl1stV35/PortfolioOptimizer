@@ -187,7 +187,11 @@ def get_arcc_fundamentals(identity: str) -> dict:
 
         nav_trend = None
         if nav_ts is not None and len(nav_ts) >= 5:
-            nav_trend = _scalar(nav_ts.iloc[-1]) - _scalar(nav_ts.iloc[-5])
+            # Fix 2: guard against _scalar returning None for either endpoint
+            _nav_new = _scalar(nav_ts.iloc[-1])
+            _nav_old = _scalar(nav_ts.iloc[-5])
+            if _nav_new is not None and _nav_old is not None:
+                nav_trend = _nav_new - _nav_old
 
         cov_signal = ("green"   if coverage and coverage >= 1.15 else
                       "yellow"  if coverage and coverage >= 1.0  else
