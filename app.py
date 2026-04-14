@@ -343,6 +343,13 @@ if page == "📊 Dashboard":
                 })
             st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
+            # ARCC missed dividend alert
+            st.warning(
+                "⚠️  **ARCC Q1 2026 dividend MISSED** — bought 2026-03-25, "
+                "ex-date was 2026-03-12.  "
+                "Next: Q2 2026 est. ex ~2026-06-12 · 133 shares × $0.48 = **$63.84 gross**"
+            )
+
     # ── Tab 2: Price & History ────────────────────────────────────────────────
     with tab_ph:
         st.subheader("Price History (6 months)")
@@ -478,6 +485,122 @@ if page == "📊 Dashboard":
             st.dataframe(hdf, width="stretch", hide_index=True)
         else:
             st.info("No dividends recorded yet.")
+
+        # ── 📅 Export Dividend Calendar (.ics) ───────────────────────────────
+        st.divider()
+        st.subheader("📅 Export to Calendar")
+        st.caption(
+            "Download the confirmed dividend history + all upcoming projected dividends "
+            "as an .ics file — importable into Google Calendar, Apple Calendar, and Outlook."
+        )
+
+        _ics_col1, _ics_col2 = st.columns([1, 3])
+        _ics_filter = _ics_col1.radio(
+            "Include",
+            ["Confirmed + Upcoming", "Upcoming only", "Confirmed only"],
+            label_visibility="collapsed",
+            horizontal=False,
+            key="ics_filter",
+        )
+
+        if _ics_col2.button("📥 Generate .ics file", type="primary", key="gen_ics"):
+            try:
+                from engine.dividend_calendar import build_events
+                import io, tempfile
+                from pathlib import Path as _ICSPath
+
+                # Build all events
+                _all_events = build_events(cfg, holdings)
+
+                # Filter by user selection
+                if _ics_filter == "Upcoming only":
+                    _events = [e for e in _all_events if "PROJECTED" in e.get("description","")
+                               or "proj" in e.get("uid","")]
+                elif _ics_filter == "Confirmed only":
+                    _events = [e for e in _all_events if "proj" not in e.get("uid","")]
+                else:
+                    _events = _all_events
+
+                if not _events:
+                    st.warning("No events to export with the current filter.")
+                else:
+                    # Generate ICS bytes without writing to disk
+                    try:
+                        from icalendar import Calendar as _iCal, Event as _iEvt, Alarm as _iAlarm
+                        from datetime import datetime as _idt, timedelta as _itd
+                        _cal = _iCal()
+                        _cal.add("prodid", "-//PortfolioOptimizer//dividend_calendar//EN")
+                        _cal.add("version", "2.0")
+                        _cal.add("calscale", "GREGORIAN")
+                        _cal.add("x-wr-calname", f"Dividends — {_active_acct['id']}")
+                        _cal.add("x-wr-timezone", "Asia/Bangkok")
+                        for _ev in _events:
+                            _e = _iEvt()
+                            _e.add("uid",         _ev["uid"] + "@portfoliooptimizer")
+                            _e.add("summary",      _ev["summary"])
+                            _e.add("dtstart",      _ev["date"])
+                            _e.add("dtend",        _ev["date"] + _itd(days=1))
+                            _e.add("description",  _ev["description"])
+                            _e.add("dtstamp",      _idt.now())
+                            _ad = _ev.get("alarm_days", 0)
+                            if _ad > 0:
+                                _a = _iAlarm()
+                                _a.add("action",      "DISPLAY")
+                                _a.add("description", _ev["summary"])
+                                _a.add("trigger",     _itd(days=-_ad))
+                                _e.add_component(_a)
+                            _cal.add_component(_e)
+                        _ics_bytes = _cal.to_ical()
+                    except ImportError:
+                        # icalendar not installed — generate RFC 5545 manually
+                        _lines = [
+                            "BEGIN:VCALENDAR", "VERSION:2.0",
+                            "PRODID:-//PortfolioOptimizer//EN",
+                            f"X-WR-CALNAME:Dividends {_active_acct['id']}",
+                        ]
+                        from datetime import timedelta as _itd
+                        for _ev in _events:
+                            _ds  = _ev["date"].strftime("%Y%m%d")
+                            _de  = (_ev["date"] + _itd(days=1)).strftime("%Y%m%d")
+                            _desc = _ev["description"].replace("\n","\\n").replace(",","\\,")
+                            _sum  = _ev["summary"].replace(",","\\,")
+                            _lines += [
+                                "BEGIN:VEVENT",
+                                f"UID:{_ev['uid']}@portfoliooptimizer",
+                                f"DTSTART;VALUE=DATE:{_ds}",
+                                f"DTEND;VALUE=DATE:{_de}",
+                                f"SUMMARY:{_sum}",
+                                f"DESCRIPTION:{_desc}",
+                            ]
+                            _ad = _ev.get("alarm_days", 0)
+                            if _ad > 0:
+                                _lines += [
+                                    "BEGIN:VALARM", "ACTION:DISPLAY",
+                                    f"DESCRIPTION:{_sum}",
+                                    f"TRIGGER:-P{_ad}D", "END:VALARM",
+                                ]
+                            _lines.append("END:VEVENT")
+                        _lines.append("END:VCALENDAR")
+                        _ics_bytes = "\r\n".join(_lines).encode("utf-8")
+
+                    from datetime import datetime as _idt2
+                    _fname = f"dividends_{_active_acct['id']}_{_idt2.today().strftime('%Y%m%d')}.ics"
+                    st.download_button(
+                        label=f"⬇️ Download {_fname}  ({len(_events)} events)",
+                        data=_ics_bytes,
+                        file_name=_fname,
+                        mime="text/calendar",
+                        key="ics_download_btn",
+                    )
+                    st.success(
+                        f"✅ Calendar ready — {len(_events)} event(s) "
+                        f"({_ics_filter}).  "
+                        "Import the .ics into Google Calendar / Apple Calendar / Outlook."
+                    )
+
+            except Exception as _ics_e:
+                st.error(f"ICS generation failed: {_ics_e}")
+                import traceback; st.code(traceback.format_exc())
 
     # ── Tab 4: Tax & Reconciliation ───────────────────────────────────────────
     with tab_tx:
