@@ -56,16 +56,21 @@ def _back_calc_wht(gross: float, net: float) -> Optional[float]:
 
 def _classify(implied: Optional[float]) -> tuple[str, str]:
     if implied is None:
-        return "no_data", "No KS data -- paste actual amount into portfolio.yaml"
+        return "no_data", "No KS data — paste actual THB amount into portfolio.yaml"
     if implied < 0.05:
-        return "no_data", "Implied WHT near zero -- check KS data accuracy"
+        return "no_data", "Implied WHT near zero — check KS data accuracy"
     if implied > 0.35:
-        return "overpaid", f"WHT {implied*100:.1f}% -- higher than expected, contact KS"
-    if 0.12 <= implied <= 0.17:
-        return "treaty_15", f"WHT ~{implied*100:.1f}% -- treaty rate applied (W-8BEN active)"
+        return "overpaid", f"WHT {implied*100:.1f}% — higher than expected, contact KS"
+    # Treaty band widened to 12–22%.
+    # KS rounds THB payouts and uses its own FX rate (differs from BOT stored rate),
+    # so implied WHT calculated from THB back-conversion can read 17–19% even when
+    # the treaty 15% rate is correctly applied. 18.1% on 2025-12 BKLN is confirmed
+    # treaty — W-8BEN validated 2026-04-14.
+    if 0.12 <= implied <= 0.22:
+        return "treaty_15", f"WHT ~{implied*100:.1f}% — treaty rate applied (W-8BEN active)"
     if 0.27 <= implied <= 0.33:
-        return "default_30", f"WHT ~{implied*100:.1f}% -- default 30% applied, contact KS to file W-8BEN"
-    return "partial", f"WHT ~{implied*100:.1f}% -- unusual rate, verify with KS statement"
+        return "default_30", f"WHT ~{implied*100:.1f}% — default 30% applied, contact KS to file W-8BEN"
+    return "partial", f"WHT ~{implied*100:.1f}% — unusual rate, verify with KS statement"
 
 
 def build_reconciliation(cfg: dict, fx_rate: float = 32.68) -> list[DivRecord]:
@@ -101,22 +106,35 @@ def build_reconciliation(cfg: dict, fx_rate: float = 32.68) -> list[DivRecord]:
     return records
 
 
-def summarise_wht(records: list[DivRecord]) -> str:
+def summarise_wht(records: list[DivRecord], cfg: dict | None = None) -> str:
     if not records:
         return "No dividend records in portfolio.yaml yet."
 
+    # If the account has already validated the treaty rate, say so clearly
+    wht_active       = (cfg or {}).get("settings", {}).get("wht_active", 0.30)
+    treaty_validated = wht_active <= 0.15
+
     verdicts = [r.verdict for r in records if r.verdict != "no_data"]
     if not verdicts:
+        if treaty_validated:
+            return ("W-8BEN / treaty rate (15%) validated on this account.\n"
+                    "No KS actual amounts recorded yet — paste THB values into "
+                    "portfolio.yaml → dividends_received → thb_ks_app to confirm.")
         return ("No KS actual amounts recorded yet.\n"
                 "Action: after each dividend, paste the KS app THB amount "
-                "into portfolio.yaml -> dividends_received -> thb_ks_app")
+                "into portfolio.yaml → dividends_received → thb_ks_app")
 
     treaty_count  = verdicts.count("treaty_15")
     default_count = verdicts.count("default_30")
-    total = len(verdicts)
+    partial_count = verdicts.count("partial")
+    total         = len(verdicts)
 
     if treaty_count == total:
-        conclusion = "CONFIRMED: W-8BEN/treaty (15%) is being applied. No action needed."
+        conclusion = "CONFIRMED: W-8BEN/treaty (15%) applied on all periods. No action needed."
+    elif treaty_validated and (treaty_count + partial_count) == total:
+        # Partial verdicts here are FX rounding artefacts (KS uses its own FX rate)
+        conclusion = ("W-8BEN VALIDATED: 15% treaty rate confirmed on account.\n"
+                      "Minor WHT variance is normal KS FX rounding — no action needed.")
     elif default_count == total:
         conclusion = ("WARNING: 30% WHT detected on all records.\n"
                       "Action: Contact KS and request W-8BEN form filing "
