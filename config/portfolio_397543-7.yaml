@@ -4,15 +4,15 @@ meta:
   broker: K CYBER TRADE (Kasikorn Securities)
   base_currency: USD
   reporting_currency: THB
-  data_as_of: '2026-04-13'
+  data_as_of: '2026-04-14'
   fx_source: BOT Weighted-average Interbank Exchange Rate
   fx_usd_thb: 32.68
 
 settings:
   risk_free_rate_annual: 0.045
-  wht_default: 0.3
+  wht_default: 0.15
   wht_treaty: 0.15
-  wht_active: 0.3
+  wht_active: 0.15
   data_history_start: '2022-01-01'
   frontier_points: 50
   report_auto_open: false
@@ -30,10 +30,11 @@ analysis:
   notes: >
     Generational wealth strategy. BKLN is the income anchor (monthly float-rate),
     ARCC is the high-yield BDC satellite (quarterly). PDI added 2026-04-01 as
-    high-yield CEF diversifier. Target: $1,000/month net passive income.
+    high-yield CEF diversifier. WHT validated at 15% treaty rate as of 2026-04-14.
+    Target: 1000 USD/month net passive income.
 
 cash:
-  usd: 158.67
+  usd: 12.63
   thb: 0.0
   total_deposited_usd: 6366.84
 
@@ -61,7 +62,7 @@ instruments:
         - ex: '2026-03-25'
           pay: '2026-03-27'
           amount: 0.1
-          note: Only 156 shares eligible (T003 29sh bought 2026-03-27, T004 7sh bought 2026-04-01 — both missed)
+          note: Only 156 shares eligible (T003 29sh bought 2026-03-27, T004 7sh bought 2026-04-01 both missed)
       estimated_upcoming:
         - ex: '2026-04-23'
           pay: '2026-04-27'
@@ -105,7 +106,7 @@ instruments:
           pay: '2026-06-30'
           amount: 0.48
           eligible_for_our_shares: true
-          note: 133 shares eligible — first dividend for our position
+          note: 133 shares eligible -- first dividend for our position
         - period: Q3 2026
           ex: '2026-09-11'
           pay: '2026-09-30'
@@ -136,7 +137,7 @@ instruments:
         - ex: '2026-04-13'
           pay: '2026-05-01'
           amount: 0.2205
-          note: Purchased 2026-04-01 (12 days before ex-date) — ALL 105 shares eligible
+          note: Purchased 2026-04-01 (12 days before ex-date) ALL 105 shares eligible
         - ex: '2026-05-11'
           pay: '2026-06-01'
           amount: 0.2205
@@ -159,7 +160,6 @@ transactions:
     commission_usd: 13.39
     total_usd: 3273.79
     note: Initial anchor position
-
   - id: T002
     date: '2026-03-25'
     type: BUY
@@ -171,8 +171,7 @@ transactions:
     gross_usd: 2388.68
     commission_usd: 5.34
     total_usd: 2394.02
-    note: BDC satellite -- first ARCC tranche. Bought 13 days after Q1 ex-div, missed $63.84 dividend
-
+    note: BDC satellite first ARCC tranche. Bought 13 days after Q1 ex-div missed 63.84 dividend
   - id: T003
     date: '2026-03-27'
     type: BUY
@@ -184,8 +183,7 @@ transactions:
     gross_usd: 591.6
     commission_usd: 5.34
     total_usd: 596.94
-    note: DCA tranche -- total BKLN now 185 shares. Bought after Mar ex-div, eligible Apr onwards
-
+    note: DCA tranche BKLN now 185 shares. Bought after Mar ex-div eligible Apr onwards
   - id: T004
     date: '2026-04-01'
     type: BUY
@@ -197,8 +195,7 @@ transactions:
     gross_usd: 142.1
     commission_usd: 5.34
     total_usd: 147.44
-    note: Within buy zone, dividend reinvestment — BKLN now 192 shares
-
+    note: Within buy zone dividend reinvestment BKLN now 192 shares
   - id: T005
     date: '2026-04-01'
     type: BUY
@@ -210,10 +207,8 @@ transactions:
     gross_usd: 1827.0
     commission_usd: 5.34
     total_usd: 1832.34
-    note: CEF diversifier — PIMCO Dynamic Income. Monthly dividend, ~15.2% yield. Eligible for Apr 2026 ex-date (2026-04-13)
+    note: CEF diversifier PIMCO Dynamic Income. Monthly dividend approx 15.2% yield. Eligible Apr 2026 ex-date 2026-04-13
 
-# Dividends received — clean, de-duplicated
-# NOTE: 2026-03 BKLN: only 156 shares were eligible (T003/T004 bought after ex-date 2026-03-25)
 dividends_received:
   - period: 2025-12
     ticker: BKLN
@@ -222,12 +217,11 @@ dividends_received:
     pay_date: '2025-12-30'
     amount_per_share_usd: 0.101
     gross_usd_estimated: 15.756
-    wht_rate_assumed: 0.3
-    net_usd_estimated: 11.029
+    wht_rate_assumed: 0.15
+    net_usd_estimated: 13.393
     thb_ks_app: 421.54
     source: KS app confirmed
     status: received
-
   - period: 2026-01
     ticker: BKLN
     shares_eligible: 156
@@ -235,12 +229,11 @@ dividends_received:
     pay_date: '2026-01-27'
     amount_per_share_usd: 0.101
     gross_usd_estimated: 15.756
-    wht_rate_assumed: 0.3
-    net_usd_estimated: 11.029
+    wht_rate_assumed: 0.15
+    net_usd_estimated: 13.393
     thb_ks_app: null
-    source: KS app (part of 2026 YTD total ฿1,356.92)
+    source: KS app (part of 2026 YTD total 1356.92 THB)
     status: received
-
   - period: 2026-02
     ticker: BKLN
     shares_eligible: 156
@@ -248,12 +241,11 @@ dividends_received:
     pay_date: '2026-02-27'
     amount_per_share_usd: 0.1
     gross_usd_estimated: 15.6
-    wht_rate_assumed: 0.3
-    net_usd_estimated: 10.92
+    wht_rate_assumed: 0.15
+    net_usd_estimated: 13.26
     thb_ks_app: null
     source: Confirmed ex/pay via stockanalysis.com
     status: received
-
   - period: 2026-03
     ticker: BKLN
     shares_eligible: 156
@@ -261,27 +253,29 @@ dividends_received:
     pay_date: '2026-03-27'
     amount_per_share_usd: 0.1
     gross_usd_estimated: 15.6
-    wht_rate_assumed: 0.3
-    net_usd_estimated: 10.92
+    wht_rate_assumed: 0.15
+    net_usd_estimated: 13.26
     thb_ks_app: null
-    source: Estimated — T003 (29sh) and T004 (7sh) bought after ex-date, not eligible
+    source: Estimated T003 and T004 bought after ex-date not eligible
     status: pending
 
-ks_app_snapshot_20260327:
-  market_value_thb: 198274.2
-  total_cost_thb: 204235.24
-  unrealized_thb: -5961.04
-  unrealized_pct: -0.0292
+ks_app_snapshot_20260414:
+  market_value_usd: 8201.80
+  market_value_thb: 268034.82
+  total_cost_usd: 8244.53
+  total_cost_thb: 269431.24
+  unrealized_usd: -42.73
+  unrealized_thb: -1396.42
+  unrealized_pct: -0.0052
   total_dividends_thb: 1778.46
   realized_thb: 0.0
   positions:
     BKLN:
-      shares: 185
-      avg_cost: 20.92
-      close_price: 20.33
-      unrealized_thb: -3575.64
+      shares: 192
+      avg_cost: 20.9167
     ARCC:
       shares: 133
-      avg_cost: 18.0
-      close_price: 17.45
-      unrealized_thb: -2385.39
+      avg_cost: 17.9852
+    PDI:
+      shares: 105
+      avg_cost: 17.4508
