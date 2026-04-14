@@ -11,9 +11,9 @@ meta:
 
 settings:
   risk_free_rate_annual: 0.016
-  wht_default: 0.15
-  wht_treaty: 0.15
-  wht_active: 0.15
+  wht_default: 0.1
+  wht_treaty: 0.1
+  wht_active: 0.1
   data_history_start: '2022-01-01'
   frontier_points: 50
   report_auto_open: false
