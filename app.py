@@ -40,12 +40,6 @@ def _groq_available() -> bool:
     import os
     return bool(os.environ.get("GROQ_API_KEY"))
 
-def _julia_available() -> bool:
-    try:
-        from engine.julia_bridge import backend_info
-        return backend_info().get("julia_available", False)
-    except Exception: return False
-
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -98,28 +92,6 @@ def _account_yaml_path(account: dict) -> Path:
     return ROOT / "config" / fname
 
 
-def _verify_pin(account_id: str, pin: str) -> bool:
-    """Check PIN from .streamlit/secrets.toml [account_pins]."""
-    if not pin:
-        return False
-    try:
-        import streamlit as st
-        stored = st.secrets.get("account_pins", {}).get(account_id, "")
-        if stored and str(stored) == str(pin):
-            return True
-    except Exception:
-        pass
-    # Dev fallback: any non-empty PIN passes if no secrets configured
-    try:
-        import streamlit as st
-        pins = st.secrets.get("account_pins", {})
-        if not pins:
-            return len(pin) >= 4   # dev mode: any 4+ digit PIN
-    except Exception:
-        return len(pin) >= 4
-    return False
-
-
 def get_active_account() -> dict:
     """Return the currently selected account dict from session state."""
     accounts = load_accounts()
@@ -166,6 +138,20 @@ def save_cfg(cfg: dict, account_id: str = ""):
     with open(ROOT / "config" / "portfolio.yaml", "w", encoding="utf-8") as f:
         yaml.dump(cfg, f, allow_unicode=True, sort_keys=False)
     st.cache_data.clear()
+
+
+def _latest_snapshot(cfg: dict) -> dict:
+    """
+    Return the most-recent ks_app_snapshot_* dict regardless of date suffix.
+    Falls back to empty dict so callers never crash on a new account.
+    """
+    snap_keys = sorted(
+        [k for k in cfg if k.startswith("ks_app_snapshot_")],
+        reverse=True      # lexicographic DESC = newest date first
+    )
+    if snap_keys:
+        return cfg.get(snap_keys[0], {})
+    return {}
 
 
 def derive_holdings(cfg: dict) -> dict:
@@ -254,15 +240,10 @@ with st.sidebar:
                 label_visibility="collapsed",
             )
             if _switch_to != _active_acct["id"]:
-                _pin = st.text_input("PIN for this account", type="password",
-                                     placeholder="4-digit PIN", key="switch_pin")
-                if st.button("Unlock", key="unlock_btn"):
-                    if _verify_pin(_switch_to, _pin):
-                        st.session_state["active_account_id"] = _switch_to
-                        st.cache_data.clear()
-                        st.rerun()
-                    else:
-                        st.error("Incorrect PIN")
+                if st.button("Switch to this account", key="switch_btn", type="primary"):
+                    st.session_state["active_account_id"] = _switch_to
+                    st.cache_data.clear()
+                    st.rerun()
 
     st.markdown("---")
 
@@ -291,8 +272,7 @@ with st.sidebar:
         return bool(os.environ.get("GITHUB_PAT")) or bool(cfg.get("github", {}).get("pat"))
     has_gh = _has_pat()
     st.caption(f"GitHub: {'✅' if has_gh else '⚠️ not set'}  |  "
-               f"AI: {'✅ Groq' if _groq_available() else '⚠️ no key'}  |  "
-               f"Julia: {'✅' if _julia_available() else '🐍 Python'}")
+               f"AI: {'✅ Groq' if _groq_available() else '⚠️ no key'}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -311,7 +291,7 @@ if page == "📊 Dashboard":
     # ── Tab 1: Overview ───────────────────────────────────────────────────────
     with tab_ov:
         st.subheader("Portfolio Overview")
-        snap = cfg.get("ks_app_snapshot_20260327", {})
+        snap = _latest_snapshot(cfg)
 
         c1,c2,c3,c4 = st.columns(4)
         mkt_thb = snap.get("market_value_thb", 0)
@@ -342,6 +322,13 @@ if page == "📊 Dashboard":
                     "P&L %":    f"{unr/h['total_cost']*100:+.2f}%",
                 })
             st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+
+            # ARCC missed dividend alert
+            st.warning(
+                "⚠️  **ARCC Q1 2026 dividend MISSED** — bought 2026-03-25, "
+                "ex-date was 2026-03-12.  "
+                "Next: Q2 2026 est. ex ~2026-06-12 · 133 shares × $0.48 = **$63.84 gross**"
+            )
 
     # ── Tab 2: Price & History ────────────────────────────────────────────────
     with tab_ph:
@@ -601,7 +588,7 @@ if page == "📊 Dashboard":
         try:
             from engine.wht_reconciliation import build_reconciliation, summarise_wht
             records = build_reconciliation(cfg, fx_r)
-            summary = summarise_wht(records)
+            summary = summarise_wht(records, cfg)
             verdict_map = {"treaty_15":"success","default_30":"error",
                            "partial":"warning","no_data":"info","overpaid":"error"}
             primary = (max(set([r.verdict for r in records]),
@@ -1167,7 +1154,7 @@ elif page == "🧪 Analytics Engine":
                     _lg.getLogger(__name__).warning(
                         "Riskfolio solver failed (%s) — falling back to Equal Weight", _opt_exc)
                     w = np.ones(len(returns.columns)) / len(returns.columns)
-                snap = cfg.get("ks_app_snapshot_20260327", {})
+                snap = _latest_snapshot(cfg)
                 pv = float(snap.get("market_value_thb", 6338*fx_r)) / fx_r
                 try:
                     from engine.julia_bridge import monte_carlo as _jl_mc
@@ -1230,7 +1217,7 @@ elif page == "🧪 Analytics Engine":
                     _lg.getLogger(__name__).warning(
                         "Riskfolio solver failed (%s) — falling back to Equal Weight", _opt_exc)
                     w = np.ones(len(returns.columns)) / len(returns.columns)
-                snap = cfg.get("ks_app_snapshot_20260327", {})
+                snap = _latest_snapshot(cfg)
                 pv = float(snap.get("market_value_thb", 6338*fx_r)) / fx_r
                 plan = GenPlanConfig(n_paths=5000, horizon_years=30,
                                       monthly_add_usd=float(mo_dca),
@@ -1327,7 +1314,7 @@ elif page == "🧪 Analytics Engine":
                         w_main = np.ones(_n) / _n
                         w_dict = {"Equal Weight": {t: 1/_n for t in tickers}}
 
-                    snap   = cfg.get("ks_app_snapshot_20260327", {})
+                    snap   = _latest_snapshot(cfg)
                     pv     = float(snap.get("market_value_thb", 6338*fx_r)) / fx_r
 
                     pnl_rows = []
@@ -1416,7 +1403,7 @@ elif page == "\U0001f468\u200d\U0001f469\u200d\U0001f467 Family Overview":
             _aincome_net = sum(
                 _ahold[t]["shares"] * _ahold[t]["avg_cost"] * _YIELDS.get(t,0.08) / 12
                 for t in _atickers) * (1 - _awht)
-            _snap = _acfg.get("ks_app_snapshot_20260327", {})
+            _snap = _latest_snapshot(_acfg)
             _total_mkt_usd += _amkt; _total_income_mo += _aincome_net
             _family_rows.append({
                 "Account":       _acct["id"],
