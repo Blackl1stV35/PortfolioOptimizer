@@ -1,3 +1,6 @@
+# add to facilitate binary wheel
+--only-binary :all:
+
 # Core portfolio analytics
 streamlit>=1.35.0
 yfinance>=0.2.40
