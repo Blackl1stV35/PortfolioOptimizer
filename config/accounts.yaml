@@ -1,11 +1,6 @@
-# config/accounts.yaml
-# =====================
-# Registry of all portfolio accounts managed by this app.
-# PINs live in .streamlit/secrets.toml under [account_pins] — never here.
-
 accounts:
   - id: "397543-7"
-    display_name: "Kanokphan S. (USD)"
+    display_name: "Kanokphan S. (USD Income)"
     broker: "K CYBER TRADE (Kasikorn Securities)"
     color: "#1A2E5C"
     accent: "#2E5BA8"
@@ -17,7 +12,7 @@ accounts:
     active: true
 
   - id: "722379-7"
-    display_name: "Kanokphan S. (THB)"
+    display_name: "Kanokphan S. (THB Cash)"
     broker: "K CYBER TRADE (Kasikorn Securities)"
     color: "#1D4E28"
     accent: "#2D6A4F"
@@ -26,4 +21,17 @@ accounts:
     base_currency: "THB"
     reporting_currency: "THB"
     account_type: "Thailand domestic asset investing"
+    active: true
+
+  - id: "005-8-95518-3"
+    display_name: "KAsset Wisdom (K-FIXED-A)"
+    broker: "KAsset (Kasikorn Asset Management)"
+    platform: "Finnomena"
+    color: "#4A1D5E"
+    accent: "#7B2FBE"
+    yaml_file: "portfolio_005895518-3.yaml"
+    strategy: "Conservative Fixed Income"
+    base_currency: "THB"
+    reporting_currency: "THB"
+    account_type: "Thai mutual fund"
     active: true

@@ -1,0 +1,65 @@
+meta:
+  account_id: "005-8-95518-3"
+  account_holder: Kanokphan Sirithienthong
+  broker: KAsset (Kasikorn Asset Management)
+  platform: Finnomena / KAsset Wisdom Account
+  base_currency: THB
+  reporting_currency: THB
+  data_as_of: '2026-04-15'
+  account_type: Thai mutual fund — savings account
+
+settings:
+  risk_free_rate_annual: 0.016
+  wht_default: 0.0
+  wht_treaty: 0.0
+  wht_active: 0.0
+  data_history_start: '2022-01-01'
+
+analysis:
+  strategy: Conservative Fixed Income
+  risk_tolerance: conservative
+  notes: >
+    Thai fixed-income mutual fund account. K-FIXED-A tracks Thai government and
+    high-grade corporate bonds. NAV fetched daily from Finnomena/KAsset.
+    No WHT on Thai domestic mutual fund redemption for individual investors.
+
+funds:
+  K-FIXED-A:
+    full_name: "กองทุนเปิดเค ตราสารหนี้ A (K-FIXED-A)"
+    fund_code: KFIXEDA
+    finnomena_code: KFIXEDA-A
+    asset_class: Fixed Income
+    sector: Thai Government + Corporate Bonds
+    currency: THB
+    nav_source: finnomena
+    holdings:
+      units: 0.0
+      cost_per_unit: 0.0
+      total_cost_thb: 0.0
+
+# Current balance — manually set from KAsset Wisdom app
+# NAV × units = market_value_thb
+# No units data yet; storing total market value directly
+cash:
+  thb: 0.0
+
+investments:
+  - fund_code: KFIXEDA
+    description: K-FIXED-A fixed-income mutual fund
+    market_value_thb: 1396284.70
+    last_manual_update: '2026-04-15'
+    nav_per_unit: null
+    units_held: null
+    nav_source: manual
+    note: >
+      Balance from KAsset Wisdom account statement 2026-04-15.
+      Units and NAV not available — update when statement is received.
+
+transactions: []
+dividends_received: []
+
+nav_history:
+  - date: '2026-04-15'
+    nav: null
+    market_value_thb: 1396284.70
+    source: manual_statement
