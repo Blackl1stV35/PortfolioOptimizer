@@ -38,14 +38,23 @@ if "lang" not in st.session_state:
 
 # Import translation with protection
 try:
-    from utils.i18n import t as translate_func, lang_toggle_button
-    t = translate_func                     
+    from utils.i18n import t as translate_func, lang_toggle_button, get_lang
+    # ── IMPORTANT: Never reassign `t` after this point. ──────────────────────
+    # Any loop variable or local named `t` at module scope will shadow this
+    # function. Use `_tkr`, `_t`, or descriptive names instead.
+    t = translate_func
 except Exception as e:
     st.warning("i18n module failed to load")
-    def t(key, **kwargs): 
+    def t(key, **kwargs):           # type: ignore[misc]
         return key
-    def lang_toggle_button(): 
+    def lang_toggle_button():       # type: ignore[misc]
         pass
+    def get_lang() -> str:          # type: ignore[misc]
+        try:
+            import streamlit as _st
+            return _st.session_state.get("lang", "en")
+        except Exception:
+            return "en"
     
 # Finnomena NAV (KAsset mutual fund)
 try:
@@ -181,12 +190,12 @@ def derive_holdings(cfg: dict) -> dict:
     shares = defaultdict(int); cost = defaultdict(float); comm = defaultdict(float)
     for tx in cfg.get("transactions", []):
         if tx["type"] == "BUY":
-            t = tx["ticker"]
-            shares[t] += tx["shares"]; cost[t] += tx["total_usd"]; comm[t] += tx["commission_usd"]
+            _tkr = tx["ticker"]   # NOTE: never use bare `t` here — it shadows the global translate fn
+            shares[_tkr] += tx["shares"]; cost[_tkr] += tx["total_usd"]; comm[_tkr] += tx["commission_usd"]
         elif tx["type"] == "SELL":
             shares[tx["ticker"]] -= tx["shares"]
-    return {t: {"shares": s, "avg_cost": cost[t]/s, "total_cost": round(cost[t],2)}
-            for t, s in shares.items() if s > 0}
+    return {_tkr: {"shares": s, "avg_cost": cost[_tkr]/s, "total_cost": round(cost[_tkr],2)}
+            for _tkr, s in shares.items() if s > 0}
 
 
 @st.cache_data(ttl=300, show_spinner="Fetching prices...")
@@ -985,7 +994,10 @@ elif page == t("analytics_engine"):
                     w_rows = []
                     for strat, ws in w_dict.items():
                         row = {"Strategy": strat}
-                        for t, v in ws.items(): row[t] = f"{v:.1%}"
+                        # CRITICAL: use `_tkr` not `t` — bare `t` at module scope
+                        # overwrites the i18n translation function and crashes all
+                        # subsequent t("key") calls in later tabs.
+                        for _tkr, v in ws.items(): row[_tkr] = f"{v:.1%}"
                         w_rows.append(row)
                     st.dataframe(pd.DataFrame(w_rows), width="stretch", hide_index=True)
                     try:
