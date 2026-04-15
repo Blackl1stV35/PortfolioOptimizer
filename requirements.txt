@@ -1,4 +1,5 @@
-streamlit>=1.32.0
+# Core portfolio analytics
+streamlit>=1.35.0
 yfinance>=0.2.40
 riskfolio-lib>=7.0.0
 plotly>=5.20.0
@@ -8,8 +9,18 @@ pyyaml>=6.0.1
 openpyxl>=3.1.2
 xlsxwriter>=3.2.0
 icalendar>=5.0.12
-edgartools>=5.0
-requests>=2.31.0
 scipy>=1.12.0
 scikit-learn>=1.4.0
+requests>=2.31.0
+
+# Phase 2: Groq LLM
 groq>=0.9.0
+
+# Phase 3: Advanced charts
+pandas-ta>=0.4.71b0
+
+# SEC EDGAR intelligence
+edgartools>=5.0
+
+# Scheduler
+APScheduler>=3.10.0
