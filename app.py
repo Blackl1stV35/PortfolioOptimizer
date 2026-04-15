@@ -32,14 +32,21 @@ import yfinance as yf
 # ── Multi-account + Groq + Julia + i18n + new features ──────────────────────────
 from pathlib import Path as _Path
 
-# i18n — language switching
-try:
-    from utils.i18n import t, get_lang, set_lang, lang_toggle_button
-except Exception:
-    def t(k, **kw): return k
-    def get_lang(): return "en"
-    def lang_toggle_button(): pass
+# ====================== I18N SETUP ======================
+if "lang" not in st.session_state:
+    st.session_state.lang = "en"
 
+# Import translation with protection
+try:
+    from utils.i18n import t as translate_func, lang_toggle_button
+    t = translate_func                     
+except Exception as e:
+    st.warning("i18n module failed to load")
+    def t(key, **kwargs): 
+        return key
+    def lang_toggle_button(): 
+        pass
+    
 # Finnomena NAV (KAsset mutual fund)
 try:
     from utils.finnomena import get_nav, get_kfixed_market_value
@@ -1368,43 +1375,62 @@ elif page == t("analytics_engine"):
                 st.error(f"Generational plan error: {e}")
                 import traceback; st.code(traceback.format_exc())
 
-    # ── Tab 6: Advanced Interactive Charts ────────────────────────────────────
+    # ── Tab 6: Advanced Interactive Charts ─────────────────────────────────────
     with tab_ch:
-        st.subheader(t("advanced_charts"))
+        st.subheader(t("advanced_charts"))        # Protected usage
+        
         try:
             from engine.charts import build_chart, TIMEFRAMES, INDICATOR_DEFAULTS
-
-            _ch_col1, _ch_col2 = st.columns([3, 1])
-            _all_tickers = list(holdings.keys()) + ["SPY", "QQQ", "AGG"]
-            _ch_ticker   = _ch_col1.selectbox("Primary ticker", _all_tickers, index=0, key="ch_ticker")
-            _ch_tf       = _ch_col2.selectbox("Timeframe", list(TIMEFRAMES.keys()),
-                                               index=list(TIMEFRAMES.keys()).index("6M"), key="ch_tf")
-
+            
+            col1, col2 = st.columns([3, 1])
+            
+            all_tickers = list(holdings.keys()) + ["SPY", "QQQ", "AGG"]
+            ch_ticker = col1.selectbox(
+                t("ticker"), all_tickers, index=0, key="ch_ticker"
+            )
+            
+            ch_tf = col2.selectbox(
+                "Timeframe", 
+                list(TIMEFRAMES.keys()),
+                index=list(TIMEFRAMES.keys()).index("6M"), 
+                key="ch_tf"
+            )
+    
             with st.expander("⚙️ Indicators & Comparison", expanded=False):
-                _i_cols = st.columns(4)
-                _ind = {}
+                i_cols = st.columns(4)
+                indicators = {}
                 for i, (ind_name, default) in enumerate(INDICATOR_DEFAULTS.items()):
-                    _ind[ind_name] = _i_cols[i % 4].checkbox(ind_name, value=default, key=f"ind_{ind_name}")
-
-                _cmp_str   = st.text_input("Compare tickers (comma-separated, e.g. ARCC,PDI)",
-                                            key="ch_cmp")
-                _benchmark = st.selectbox("Benchmark", ["None","SPY","QQQ","AGG","^TNX"],
-                                           key="ch_bm")
-                _benchmark = None if _benchmark == "None" else _benchmark
-
-            _cmp_list = [x.strip().upper() for x in _cmp_str.split(",") if x.strip()] if "_cmp_str" in dir() else []
-
-            with st.spinner(f"Loading {_ch_ticker} ({_ch_tf})..."):
-                _fig = build_chart(
-                    ticker=_ch_ticker, timeframe=_ch_tf,
-                    indicators=_ind, benchmark=_benchmark,
-                    compare_tickers=_cmp_list,
+                    indicators[ind_name] = i_cols[i % 4].checkbox(
+                        ind_name, value=default, key=f"ind_{ind_name}"
+                    )
+                
+                cmp_str = st.text_input(
+                    "Compare tickers (comma-separated, e.g. ARCC,PDI)", 
+                    key="ch_cmp"
                 )
-            st.plotly_chart(_fig, width="stretch")
-
-        except Exception as _ce:
-            st.error(f"Chart error: {_ce}")
-            import traceback; st.code(traceback.format_exc())
+                benchmark = st.selectbox(
+                    "Benchmark", ["None", "SPY", "QQQ", "AGG", "^TNX"], 
+                    key="ch_bm"
+                )
+                benchmark = None if benchmark == "None" else benchmark
+    
+            cmp_list = [x.strip().upper() for x in cmp_str.split(",") if x.strip()]
+    
+            with st.spinner(f"Loading {ch_ticker} ({ch_tf})..."):
+                fig = build_chart(
+                    ticker=ch_ticker,
+                    timeframe=ch_tf,
+                    indicators=indicators,
+                    benchmark=benchmark,
+                    compare_tickers=cmp_list,
+                )
+            
+            st.plotly_chart(fig, use_container_width=True)
+    
+        except Exception as e:
+            st.error(f"Chart engine error: {e}")
+            import traceback
+            st.code(traceback.format_exc(), language="python")
 
     # ── Tab 7: Exit Position Simulator ─────────────────────────────────────────
     with tab_ex:
