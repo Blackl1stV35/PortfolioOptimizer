@@ -27,6 +27,3 @@ edgartools>=5.0
 
 # Scheduler
 APScheduler>=3.10.0
-
-# unofficial API for finnomena.com
-finnomena-api-unofficial
