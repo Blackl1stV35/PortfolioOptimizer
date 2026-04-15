@@ -1,0 +1,2 @@
+[project.optional-dependencies]
+charts = ["pandas-ta==0.3.14b0"]
