@@ -29,8 +29,24 @@ import streamlit as st
 import yaml
 import yfinance as yf
 
-# ── Multi-account + Groq + Julia (patched) ────────────────────────────────────
+# ── Multi-account + Groq + Julia + i18n + new features ──────────────────────────
 from pathlib import Path as _Path
+
+# i18n — language switching
+try:
+    from utils.i18n import t, get_lang, set_lang, lang_toggle_button
+except Exception:
+    def t(k, **kw): return k
+    def get_lang(): return "en"
+    def lang_toggle_button(): pass
+
+# Finnomena NAV (KAsset mutual fund)
+try:
+    from utils.finnomena import get_nav, get_kfixed_market_value
+    _FINNOMENA = True
+except Exception:
+    _FINNOMENA = False
+
 
 def _groq_available() -> bool:
     try:
@@ -248,9 +264,9 @@ with st.sidebar:
     st.markdown("---")
 
     # ── Navigation ────────────────────────────────────────────────────────────
-    _nav_options = ["📊 Dashboard", "🔍 Intelligence Hub", "🧪 Analytics Engine"]
+    _nav_options = [t("dashboard"), t("intelligence_hub"), t("analytics_engine")]
     if len(_all_accounts) > 1:
-        _nav_options.append("👨‍👩‍👧 Family Overview")
+        _nav_options.append(t("family_overview"))
 
     page = st.radio(
         "Navigation",
@@ -274,11 +290,15 @@ with st.sidebar:
     st.caption(f"GitHub: {'✅' if has_gh else '⚠️ not set'}  |  "
                f"AI: {'✅ Groq' if _groq_available() else '⚠️ no key'}")
 
+    # Language toggle
+    st.markdown("---")
+    lang_toggle_button()
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE 1: DASHBOARD
 # ══════════════════════════════════════════════════════════════════════════════
-if page == "📊 Dashboard":
+if page == t("dashboard"):
 
     tab_ov, tab_ph, tab_dc, tab_ta, tab_tx = st.tabs([
         "Overview",
@@ -290,39 +310,103 @@ if page == "📊 Dashboard":
 
     # ── Tab 1: Overview ───────────────────────────────────────────────────────
     with tab_ov:
-        st.subheader("Portfolio Overview")
-        snap = _latest_snapshot(cfg)
+        st.subheader(t("portfolio_overview"))
+        _acct_type = _active_acct.get("account_type", "")
 
-        c1,c2,c3,c4 = st.columns(4)
-        mkt_thb = snap.get("market_value_thb", 0)
-        unr_thb = snap.get("unrealized_thb", 0)
-        div_thb = snap.get("total_dividends_thb", 0)
-        cash_u  = cfg.get("cash", {}).get("usd", 0)
+        # ── KAsset / Thai mutual fund account ─────────────────────────────────
+        if "mutual fund" in _acct_type.lower():
+            _kfixed_mkt = 0.0
+            _nav_info   = {}
+            if _FINNOMENA:
+                _nav_info   = get_nav("KFIXEDA", cfg)
+                _kfixed_mkt = get_kfixed_market_value(cfg)
+            if not _kfixed_mkt:
+                _kfixed_mkt = sum(
+                    float(inv.get("market_value_thb", 0))
+                    for inv in cfg.get("investments", []))
 
-        c1.metric("Market Value (THB)",  f"฿{mkt_thb:,.0f}",  f"฿{unr_thb:+,.0f} unrealised")
-        c2.metric("Market Value (USD)",  f"${mkt_thb/fx_r:,.0f}")
-        c3.metric("Dividends Received",  f"฿{div_thb:,.2f}")
-        c4.metric("Cash (USD)",          f"${cash_u:.2f}")
+            if _nav_info.get("stale"):
+                st.warning(t("nav_stale") + f" — last: {_nav_info.get('date','?')}")
 
-        st.divider()
-        if tickers:
-            prices = load_prices(tickers)
-            rows = []
-            for tkr, h in holdings.items():
-                curr = float(prices[tkr].iloc[-1]) if tkr in prices.columns else 0
-                mkt  = h["shares"] * curr; unr = mkt - h["total_cost"]
-                rows.append({
-                    "Ticker":   tkr,
-                    "Shares":   h["shares"],
-                    "Avg Cost": f"${h['avg_cost']:.2f}",
-                    "Current":  f"${curr:.2f}",
-                    "Mkt Value":f"${mkt:,.2f}",
-                    "P&L":      f"${unr:+,.2f}",
-                    "P&L THB":  f"฿{unr*fx_r:+,.0f}",
-                    "P&L %":    f"{unr/h['total_cost']*100:+.2f}%",
-                })
-            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-            
+            c1,c2,c3,c4 = st.columns(4)
+            c1.metric(t("total_fund_value"), f"฿{_kfixed_mkt:,.2f}")
+            c2.metric("NAV / unit",
+                      f"฿{_nav_info['nav']:.4f}" if _nav_info.get("nav") else "Manual entry")
+            c3.metric("Source", _nav_info.get("source","manual").replace("_"," ").title())
+            c4.metric(t("cash_thb"), f"฿{cfg.get('cash',{}).get('thb',0):,.2f}")
+
+            st.divider()
+            for inv in cfg.get("investments", []):
+                st.markdown(f"**{inv.get('fund_code','')}** — {inv.get('description','')}")
+                _ic1,_ic2,_ic3 = st.columns(3)
+                _ic1.metric("Market value", f"฿{inv.get('market_value_thb',0):,.2f}")
+                _ic2.metric("Units held", str(inv.get("units_held") or "—"))
+                _ic3.metric("Last updated", str(inv.get("last_manual_update","—")))
+
+            st.divider()
+            with st.expander(t("manual_nav_entry"), expanded=False):
+                with st.form("nav_update_form"):
+                    _nu_nav = st.number_input("NAV per unit (฿)", min_value=0.0001,
+                                               format="%.4f", value=10.0)
+                    _nu_mv  = st.number_input("Total market value (฿)", min_value=0.0,
+                                               value=float(_kfixed_mkt))
+                    if st.form_submit_button(t("update_nav"), type="primary"):
+                        from utils.finnomena import update_nav_in_yaml
+                        _cfg_u = update_nav_in_yaml(cfg, "KFIXEDA", _nu_nav, _nu_mv)
+                        save_cfg(_cfg_u, _active_acct["id"])
+                        st.success(f"NAV updated: ฿{_nu_nav:.4f}  |  market value ฿{_nu_mv:,.2f}")
+                        st.rerun()
+
+        else:
+            # ── Normal account (USD income or THB cash) ────────────────────────
+            snap    = _latest_snapshot(cfg)
+            mkt_usd = snap.get("market_value_usd", 0)
+            mkt_thb = snap.get("market_value_thb", mkt_usd * fx_r if mkt_usd else 0)
+            unr_thb = snap.get("unrealized_thb", snap.get("unrealized_usd", 0) * fx_r)
+            div_thb = snap.get("total_dividends_thb", 0)
+            cash_u  = cfg.get("cash", {}).get("usd", 0)
+            cash_b  = cfg.get("cash", {}).get("thb", 0)
+
+            c1,c2,c3,c4 = st.columns(4)
+            if cfg.get("meta",{}).get("base_currency") == "THB" and mkt_usd == 0:
+                c1.metric(t("cash_thb"), f"฿{cash_b:,.2f}")
+                c2.metric(t("market_value_thb"), f"฿{mkt_thb:,.0f}")
+                c3.metric(t("dividends_received"), f"฿{div_thb:,.2f}")
+                c4.metric(t("market_value_usd"), f"${mkt_thb/fx_r:,.0f}" if fx_r else "—")
+            else:
+                c1.metric(t("market_value_thb"), f"฿{mkt_thb:,.0f}",
+                           f"฿{unr_thb:+,.0f} {t('unrealised')}")
+                c2.metric(t("market_value_usd"), f"${mkt_usd:,.0f}")
+                c3.metric(t("dividends_received"), f"฿{div_thb:,.2f}")
+                c4.metric(t("cash_usd"), f"${cash_u:.2f}")
+
+            st.divider()
+            if tickers:
+                prices = load_prices(tickers)
+                rows = []
+                for tkr, h in holdings.items():
+                    curr = float(prices[tkr].iloc[-1]) if tkr in prices.columns else 0
+                    mkt  = h["shares"] * curr; unr = mkt - h["total_cost"]
+                    rows.append({
+                        t("ticker"):   tkr,
+                        t("shares"):   h["shares"],
+                        t("avg_cost"): f"${h['avg_cost']:.2f}",
+                        t("current"):  f"${curr:.2f}",
+                        t("mkt_value"):f"${mkt:,.2f}",
+                        "P&L":         f"${unr:+,.2f}",
+                        "P&L THB":     f"฿{unr*fx_r:+,.0f}",
+                        "P&L %":       f"{unr/h['total_cost']*100:+.2f}%" if h["total_cost"] else "—",
+                    })
+                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+
+                # ARCC missed dividend alert
+                if "ARCC" in holdings:
+                    st.warning(
+                        "⚠️  **ARCC Q1 2026 dividend MISSED** — bought 2026-03-25, "
+                        "ex-date was 2026-03-12.  "
+                        "Next: Q2 2026 est. ex ~2026-06-12 · 133 shares × $0.48 = **$63.84 gross**"
+                    )
+
     # ── Tab 2: Price & History ────────────────────────────────────────────────
     with tab_ph:
         st.subheader("Price History (6 months)")
@@ -652,7 +736,7 @@ if page == "📊 Dashboard":
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE 2: INTELLIGENCE HUB
 # ══════════════════════════════════════════════════════════════════════════════
-elif page == "🔍 Intelligence Hub":
+elif page == t("intelligence_hub"):
 
     tab_mp, tab_sec, tab_fx = st.tabs([
         "📡 Macro Pulse", "📋 SEC Intelligence", "💱 FX Timing"
@@ -827,15 +911,18 @@ elif page == "🔍 Intelligence Hub":
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE 3: ANALYTICS ENGINE
 # ══════════════════════════════════════════════════════════════════════════════
-elif page == "🧪 Analytics Engine":
+elif page == t("analytics_engine"):
 
-    tab_ro, tab_bt, tab_wi, tab_mc, tab_gp, tab_rpt = st.tabs([
-        "⚡ Risk & Optimisation",
-        "⏱ Backtest",
-        "🔬 What-If Optimizer",
-        "📈 Monte Carlo",
-        "🏛 Generational Plan",
-        "📥 Download Report",
+    tab_ro, tab_bt, tab_wi, tab_mc, tab_gp, tab_ch, tab_ex, tab_ai, tab_rpt = st.tabs([
+        t("risk_optimisation"),
+        t("backtest"),
+        t("whatif"),
+        t("monte_carlo"),
+        t("gen_plan"),
+        t("advanced_charts"),
+        t("exit_simulator"),
+        t("ai_research"),
+        t("download_report"),
     ])
 
     # ── Shared price/returns load ─────────────────────────────────────────────
@@ -1109,16 +1196,28 @@ elif page == "🧪 Analytics Engine":
                     f'Type "{_confirm_key}" to apply',
                     placeholder=_confirm_key,
                 )
-                if st.button("✅ Apply What-If to portfolio.yaml", type="primary"):
-                    if confirm_txt.strip().upper() == _confirm_key:
-                        cfg_new = apply_scenario_to_config(cfg, tx_prev)
-                        save_cfg(cfg_new, _active_acct["id"])
-                        gh_result = _github_push(cfg_new, f"What-If applied: {_tickers_str}")
-                        gh_msg = "✅ GitHub sync" if gh_result["success"] else f"⚠️ {gh_result.get('error','')[:60]}"
-                        st.success(f"✅ Transaction(s) applied.  {gh_msg}")
-                        st.rerun()
-                    else:
-                        st.error("Confirmation text doesn't match — not applied.")
+                # ── Sandbox vs Live apply toggle ──────────────────────────
+                _sandbox = st.checkbox(
+                    "🔬 Sandbox mode — preview only, never saves to portfolio.yaml",
+                    value=True, key="whatif_sandbox",
+                    help="In sandbox mode you can freely add/remove any asset with zero risk."
+                )
+                if _sandbox:
+                    st.info(
+                        "**Sandbox active** — results are preview-only. "
+                        "Uncheck to apply the transaction to your live portfolio."
+                    )
+                else:
+                    if st.button("✅ Apply What-If to portfolio.yaml", type="primary"):
+                        if confirm_txt.strip().upper() == _confirm_key:
+                            cfg_new = apply_scenario_to_config(cfg, tx_prev)
+                            save_cfg(cfg_new, _active_acct["id"])
+                            gh_result = _github_push(cfg_new, f"What-If applied: {_tickers_str}")
+                            gh_msg = "✅ GitHub sync" if gh_result["success"] else f"⚠️ {gh_result.get('error','')[:60]}"
+                            st.success(f"✅ Transaction(s) applied.  {gh_msg}")
+                            st.rerun()
+                        else:
+                            st.error("Confirmation text doesn't match — not applied.")
 
     # ── Tab 4: Monte Carlo ────────────────────────────────────────────────────
     with tab_mc:
@@ -1269,9 +1368,181 @@ elif page == "🧪 Analytics Engine":
                 st.error(f"Generational plan error: {e}")
                 import traceback; st.code(traceback.format_exc())
 
-    # ── Tab 6: Download Full Report ───────────────────────────────────────────
+    # ── Tab 6: Advanced Interactive Charts ────────────────────────────────────
+    with tab_ch:
+        st.subheader(t("advanced_charts"))
+        try:
+            from engine.charts import build_chart, TIMEFRAMES, INDICATOR_DEFAULTS
+
+            _ch_col1, _ch_col2 = st.columns([3, 1])
+            _all_tickers = list(holdings.keys()) + ["SPY", "QQQ", "AGG"]
+            _ch_ticker   = _ch_col1.selectbox("Primary ticker", _all_tickers, index=0, key="ch_ticker")
+            _ch_tf       = _ch_col2.selectbox("Timeframe", list(TIMEFRAMES.keys()),
+                                               index=list(TIMEFRAMES.keys()).index("6M"), key="ch_tf")
+
+            with st.expander("⚙️ Indicators & Comparison", expanded=False):
+                _i_cols = st.columns(4)
+                _ind = {}
+                for i, (ind_name, default) in enumerate(INDICATOR_DEFAULTS.items()):
+                    _ind[ind_name] = _i_cols[i % 4].checkbox(ind_name, value=default, key=f"ind_{ind_name}")
+
+                _cmp_str   = st.text_input("Compare tickers (comma-separated, e.g. ARCC,PDI)",
+                                            key="ch_cmp")
+                _benchmark = st.selectbox("Benchmark", ["None","SPY","QQQ","AGG","^TNX"],
+                                           key="ch_bm")
+                _benchmark = None if _benchmark == "None" else _benchmark
+
+            _cmp_list = [x.strip().upper() for x in _cmp_str.split(",") if x.strip()] if "_cmp_str" in dir() else []
+
+            with st.spinner(f"Loading {_ch_ticker} ({_ch_tf})..."):
+                _fig = build_chart(
+                    ticker=_ch_ticker, timeframe=_ch_tf,
+                    indicators=_ind, benchmark=_benchmark,
+                    compare_tickers=_cmp_list,
+                )
+            st.plotly_chart(_fig, width="stretch")
+
+        except Exception as _ce:
+            st.error(f"Chart error: {_ce}")
+            import traceback; st.code(traceback.format_exc())
+
+    # ── Tab 7: Exit Position Simulator ─────────────────────────────────────────
+    with tab_ex:
+        st.subheader(t("exit_sim_title"))
+        st.caption("Sandbox mode — computes full portfolio impact of selling a position. Never modifies YAML.")
+
+        if not holdings:
+            st.warning("No holdings found in current account.")
+        else:
+            _ex_col1, _ex_col2, _ex_col3 = st.columns(3)
+            _ex_ticker = _ex_col1.selectbox(t("select_position"), list(holdings.keys()), key="ex_ticker")
+            _ex_held   = holdings[_ex_ticker]["shares"]
+            _ex_shares = _ex_col2.slider(t("shares_to_sell"), 1, _ex_held, min(_ex_held, 50), key="ex_shares")
+            _ex_price  = _ex_col3.number_input(t("exit_price"), min_value=0.01,
+                                                 value=float(holdings[_ex_ticker]["avg_cost"]),
+                                                 format="%.4f", key="ex_price")
+
+            _ex_pct = _ex_shares / _ex_held
+            st.caption(f"Selling **{_ex_shares}/{_ex_held} shares** ({_ex_pct:.0%} of position) "
+                       f"at **${_ex_price:.4f}** — gross proceeds ${_ex_shares*_ex_price:,.2f}")
+
+            if st.button(t("compute_exit"), type="primary", key="compute_exit_btn"):
+                from engine.exit_simulator import simulate_exit
+                _ex_result = simulate_exit(
+                    cfg=cfg, ticker=_ex_ticker,
+                    shares_to_sell=_ex_shares, exit_price_usd=_ex_price,
+                    fx_rate=fx_r, wht_rate=wht,
+                )
+
+                if _ex_result.get("error"):
+                    st.error(_ex_result["error"])
+                else:
+                    # ── KPI cards ─────────────────────────────────────────────
+                    _xc1,_xc2,_xc3,_xc4 = st.columns(4)
+                    _pnl = _ex_result["pnl"]
+                    _inc = _ex_result["income"]
+                    _xc1.metric(t("capital_gain"),
+                                f"${_pnl['capital_gain_usd']:+,.2f}",
+                                f"฿{_pnl['capital_gain_thb']:+,.0f}")
+                    _xc2.metric(t("lost_income"),
+                                f"${_inc['lost_net_mo']:.2f}/mo",
+                                f"${_inc['income_drop_pct']:+.1f}% portfolio")
+                    _xc3.metric("Proceeds (USD)", f"${_ex_result['trade']['net_proceeds_usd']:,.2f}")
+                    _xc4.metric("Proceeds (THB)", f"฿{_ex_result['trade']['net_proceeds_thb']:,.0f}")
+
+                    # ── Details ───────────────────────────────────────────────
+                    _xt1, _xt2 = st.tabs(["💰 P&L + Income", "🌐 FX + Generational"])
+                    with _xt1:
+                        _ex_rows = [
+                            {"Metric": "Cost basis", "Value": f"${_pnl['cost_basis_usd']:,.2f}"},
+                            {"Metric": "Avg cost/share", "Value": f"${_pnl['avg_cost_usd']:.4f}"},
+                            {"Metric": "Exit price", "Value": f"${_ex_price:.4f}"},
+                            {"Metric": "Capital gain/loss", "Value": f"${_pnl['capital_gain_usd']:+,.2f}  ({_pnl['gain_pct']:+.2f}%)"},
+                            {"Metric": "Capital gains tax (Thai)", "Value": _ex_result['tax']['capital_gains_tax_usd']},
+                            {"Metric": "Lost income/mo (net)", "Value": f"${_inc['lost_net_mo']:.2f}"},
+                            {"Metric": "Remaining income/mo", "Value": f"${_inc['remaining_net_mo']:.2f}"},
+                            {"Metric": "Portfolio income drop", "Value": f"{_inc['income_drop_pct']:.1f}%"},
+                        ]
+                        st.dataframe(pd.DataFrame(_ex_rows), width="stretch", hide_index=True)
+
+                        # Concentration after
+                        _conc = _ex_result["portfolio"]["concentration_after"]
+                        if _conc:
+                            st.subheader("Concentration after exit")
+                            _conc_df = pd.DataFrame([
+                                {"Ticker": k, "Weight": f"{v:.1%}",
+                                 "Status": "⚠️ High" if v > 0.5 else "✅ OK"}
+                                for k,v in sorted(_conc.items(), key=lambda x: -x[1])
+                            ])
+                            st.dataframe(_conc_df, width="stretch", hide_index=True)
+
+                    with _xt2:
+                        _gen = _ex_result["generational"]
+                        st.metric("Future income lost (30yr compounded)",
+                                  f"${_gen['future_income_lost_30yr']:,.0f}",
+                                  help=_gen["note"])
+                        st.metric("Proceeds → reinvested at FX",
+                                  f"฿{_ex_result['fx']['proceeds_thb']:,.0f}")
+                        st.caption(_ex_result["tax"]["note"])
+
+                    # ── AI recommendation ──────────────────────────────────────
+                    st.divider()
+                    st.subheader("📋 Analysis")
+                    st.info(_ex_result["recommendation"])
+
+    # ── Tab 8: AI Portfolio Research ────────────────────────────────────────────
+    with tab_ai:
+        st.subheader(t("ai_research_title"))
+        st.caption(
+            "Ask ANY question about your portfolio, macro, tax, strategy, or exits. "
+            "Responds in English or Thai based on your language setting."
+        )
+
+        if not _groq_available():
+            st.error("Groq API key not configured. Add `[groq] api_key = 'gsk_...'` to .streamlit/secrets.toml.")
+        else:
+            # Chat history in session state
+            if "ai_history" not in st.session_state:
+                st.session_state["ai_history"] = []
+
+            # Starter questions
+            from utils.research_agent import STARTER_QUESTIONS, ask_stream
+            _lang = get_lang()
+            _starters = STARTER_QUESTIONS.get(_lang, STARTER_QUESTIONS["en"])
+
+            with st.expander("💡 Starter questions — click to ask", expanded=len(st.session_state["ai_history"]) == 0):
+                for _sq in _starters:
+                    if st.button(_sq, key=f"sq_{hash(_sq)}", use_container_width=True):
+                        st.session_state["ai_history"].append({"role":"user","content":_sq})
+                        st.rerun()
+
+            # Chat display
+            for _msg in st.session_state["ai_history"]:
+                with st.chat_message(_msg["role"]):
+                    st.markdown(_msg["content"])
+
+            # Input
+            _user_input = st.chat_input(t("ask_anything"))
+            if _user_input:
+                st.session_state["ai_history"].append({"role":"user","content":_user_input})
+                with st.chat_message("user"):
+                    st.markdown(_user_input)
+                with st.chat_message("assistant"):
+                    _response = st.write_stream(ask_stream(
+                        question=_user_input,
+                        history=st.session_state["ai_history"][:-1],
+                        cfg=cfg, lang=_lang, fx=fx_r, wht=wht,
+                    ))
+                st.session_state["ai_history"].append({"role":"assistant","content":_response})
+
+            if st.session_state["ai_history"]:
+                if st.button("🗑 Clear conversation", key="clear_ai"):
+                    st.session_state["ai_history"] = []
+                    st.rerun()
+
+    # ── Tab 9: Download Full Report ───────────────────────────────────────────
     with tab_rpt:
-        st.subheader("Download Full Excel Report (12 sheets)")
+        st.subheader(t("download_report"))
         st.info("Generates the complete report with all analytics, charts, and projections.")
         if st.button("📊 Generate Report (30–60s)", type="primary"):
             try:
@@ -1367,9 +1638,15 @@ elif page == "🧪 Analytics Engine":
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# KAsset account: special Overview for Thai mutual fund accounts
+# ══════════════════════════════════════════════════════════════════════════════
+# Injected into Dashboard > Overview tab when account_type == "Thai mutual fund"
+# (Handled inline above via _active_acct check — see Dashboard tab_ov)
+
+# ══════════════════════════════════════════════════════════════════════════════
 # PAGE 4: FAMILY OVERVIEW  (multi-account consolidated view)
 # ══════════════════════════════════════════════════════════════════════════════
-elif page == "\U0001f468\u200d\U0001f469\u200d\U0001f467 Family Overview":
+elif page == t("family_overview"):
 
     st.subheader("\U0001f468\u200d\U0001f469\u200d\U0001f467 Family Portfolio Overview")
     st.caption("Consolidated view across all accounts. Add accounts in config/accounts.yaml.")
