@@ -257,7 +257,7 @@ dividends_received:
     net_usd_estimated: 13.26
     thb_ks_app: 421.54
     source: Estimated T003 and T004 bought after ex-date not eligible
-    status: pending
+    status: received
 
 ks_app_snapshot_20260414:
   market_value_usd: 8201.80
