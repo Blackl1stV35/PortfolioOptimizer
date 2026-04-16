@@ -415,6 +415,14 @@ if page == t("dashboard"):
                     })
                 st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
+                # ARCC missed dividend alert
+                if "ARCC" in holdings:
+                    st.warning(
+                        "⚠️  **ARCC Q1 2026 dividend MISSED** — bought 2026-03-25, "
+                        "ex-date was 2026-03-12.  "
+                        "Next: Q2 2026 est. ex ~2026-06-12 · 133 shares × $0.48 = **$63.84 gross**"
+                    )
+
     # ── Tab 2: Price & History ────────────────────────────────────────────────
     with tab_ph:
         st.subheader("Price History (6 months)")
@@ -1682,59 +1690,161 @@ elif page == t("family_overview"):
     st.caption("Consolidated view across all accounts. Add accounts in config/accounts.yaml.")
 
     _family_rows = []
-    _total_mkt_usd = 0.0; _total_income_mo = 0.0
-    _YIELDS = {"BKLN":0.0707,"ARCC":0.1066,"PDI":0.152,"MAIN":0.076,"HTGC":0.12}
+    _total_mkt_thb = 0.0   # aggregate in THB (common currency for mixed accounts)
+    _total_income_mo = 0.0  # USD-denominated income (THB accounts contribute 0)
+    _YIELDS = {"BKLN": 0.0707, "ARCC": 0.1066, "PDI": 0.152, "MAIN": 0.076, "HTGC": 0.12}
 
     for _acct in _all_accounts:
+        _aid = _acct["id"]
         try:
-            _acfg  = load_cfg(_acct["id"])
-            _ahold = derive_holdings(_acfg)
-            _afx   = _acfg.get("meta",{}).get("fx_usd_thb", 32.68)
-            _awht  = _acfg.get("settings",{}).get("wht_active", 0.30)
-            if not _ahold:
-                continue
-            _atickers = tuple(sorted(_ahold.keys()))
-            try:
-                _aprices = load_prices(_atickers)
-                _amkt = sum(_ahold[t]["shares"] * float(_aprices[t].iloc[-1])
-                            for t in _atickers if t in _aprices.columns)
-            except Exception:
-                _amkt = sum(_ahold[t]["shares"] * _ahold[t]["avg_cost"] for t in _atickers)
-            _aincome_net = sum(
-                _ahold[t]["shares"] * _ahold[t]["avg_cost"] * _YIELDS.get(t,0.08) / 12
-                for t in _atickers) * (1 - _awht)
-            _snap = _latest_snapshot(_acfg)
-            _total_mkt_usd += _amkt; _total_income_mo += _aincome_net
+            _acfg      = load_cfg(_aid)
+            _afx       = _acfg.get("meta", {}).get("fx_usd_thb", 32.68)
+            _awht      = _acfg.get("settings", {}).get("wht_active", 0.30)
+            _acct_type = _acct.get("account_type", "").lower()
+            _snap      = _latest_snapshot(_acfg)
+
+            # ── Determine market value, holdings label, and income by account type ──
+            #
+            # Bug that was here: the old code called `derive_holdings()` and then
+            # `if not _ahold: continue` — which silently skipped accounts 722379-7
+            # (cash-only, no transactions) and 005-8-95518-3 (mutual fund stored in
+            # `investments` list, not `transactions`).  Each account type needs its
+            # own value-extraction path.
+
+            if "mutual fund" in _acct_type:
+                # ── Path A: Thai mutual fund (K-FIXED-A / KAsset Wisdom) ──────────
+                # Value lives in cfg["investments"][*].market_value_thb  OR  finnomena
+                _inv_mkt_thb = sum(
+                    float(inv.get("market_value_thb", 0))
+                    for inv in _acfg.get("investments", [])
+                )
+                # Also check finnomena live NAV if available
+                if _FINNOMENA and not _inv_mkt_thb:
+                    try:
+                        _inv_mkt_thb = get_kfixed_market_value(_acfg)
+                    except Exception:
+                        pass
+                _cash_thb    = float(_acfg.get("cash", {}).get("thb", 0))
+                _amkt_thb    = _inv_mkt_thb + _cash_thb
+                _amkt_usd    = _amkt_thb / _afx if _afx else 0.0
+                _fund_codes  = ", ".join(
+                    inv.get("fund_code", "") for inv in _acfg.get("investments", [])
+                ) or "—"
+                _aincome_net = 0.0   # fixed-income fund; no recurring USD dividend stream
+                _div_thb     = float(_snap.get("total_dividends_thb", 0)) if _snap else 0.0
+                _holdings_label = f"Mutual fund: {_fund_codes}"
+
+            elif _acfg.get("meta", {}).get("base_currency") == "THB":
+                # ── Path B: THB cash / domestic Thai account ──────────────────────
+                # Value lives in snapshot or cash block; no USD stock transactions.
+                _amkt_thb    = float(
+                    _snap.get("market_value_thb",
+                    _acfg.get("cash", {}).get("thb", 0))
+                )
+                _amkt_usd    = _amkt_thb / _afx if _afx else 0.0
+                _aincome_net = 0.0   # cash account; no dividend yield
+                _div_thb     = float(_snap.get("total_dividends_thb", 0)) if _snap else 0.0
+                _holdings_label = "THB cash / domestic assets"
+
+            else:
+                # ── Path C: USD income / brokerage account ────────────────────────
+                # Value derived from transactions → derive_holdings() + live prices
+                _ahold = derive_holdings(_acfg)
+                if not _ahold:
+                    # No transactions yet — fall back to snapshot
+                    _amkt_usd = float(_snap.get("market_value_usd", 0)) if _snap else 0.0
+                    _amkt_thb = float(_snap.get("market_value_thb", _amkt_usd * _afx)) if _snap else 0.0
+                    _aincome_net = 0.0
+                    _holdings_label = "No holdings yet"
+                else:
+                    _atickers = tuple(sorted(_ahold.keys()))
+                    try:
+                        _aprices = load_prices(_atickers)
+                        _amkt_usd = sum(
+                            _ahold[_tkr]["shares"] * float(_aprices[_tkr].iloc[-1])
+                            for _tkr in _atickers if _tkr in _aprices.columns
+                        )
+                    except Exception:
+                        _amkt_usd = sum(
+                            _ahold[_tkr]["shares"] * _ahold[_tkr]["avg_cost"]
+                            for _tkr in _atickers
+                        )
+                    _amkt_thb    = _amkt_usd * _afx
+                    _aincome_net = sum(
+                        _ahold[_tkr]["shares"] * _ahold[_tkr]["avg_cost"]
+                        * _YIELDS.get(_tkr, 0.08) / 12
+                        for _tkr in _atickers
+                    ) * (1 - _awht)
+                    _holdings_label = ", ".join(_atickers)
+                _div_thb = float(_snap.get("total_dividends_thb", 0)) if _snap else 0.0
+
+            # ── Accumulate totals ─────────────────────────────────────────────────
+            _total_mkt_thb   += _amkt_thb
+            _total_income_mo += _aincome_net
+
             _family_rows.append({
-                "Account":       _acct["id"],
-                "Holder":        _acct.get("display_name",""),
-                "Holdings":      ", ".join(_atickers),
-                "Mkt Value ($)": f"${_amkt:,.0f}",
-                "Mkt Value (฿)": f"\u0e3f{_amkt*_afx:,.0f}",
+                "Account":        _aid,
+                "Name":           _acct.get("display_name", ""),
+                "Type":           _acct.get("account_type", "—"),
+                "Holdings":       _holdings_label,
+                "Mkt Value (฿)":  f"\u0e3f{_amkt_thb:,.0f}",
+                "Mkt Value ($)":  f"${_amkt_usd:,.0f}",
                 "Income/mo (net)":f"${_aincome_net:.2f}",
-                "Dividends (฿)": f"\u0e3f{_snap.get('total_dividends_thb',0):,.2f}",
+                "Dividends (฿)":  f"\u0e3f{_div_thb:,.2f}",
             })
+
         except Exception as _e:
-            _family_rows.append({"Account":_acct["id"],"Holder":"—","Holdings":f"Error: {_e}",
-                                  "Mkt Value ($)":"—","Mkt Value (฿)":"—",
-                                  "Income/mo (net)":"—","Dividends (฿)":"—"})
+            import traceback as _tb
+            _family_rows.append({
+                "Account": _aid, "Name": _acct.get("display_name","—"),
+                "Type": "error", "Holdings": f"Error: {_e}",
+                "Mkt Value (฿)": "—", "Mkt Value ($)": "—",
+                "Income/mo (net)": "—", "Dividends (฿)": "—",
+            })
+            logging.warning("Family Overview error for %s: %s\n%s", _aid, _e, _tb.format_exc())
 
     if _family_rows:
-        _c1,_c2,_c3,_c4 = st.columns(4)
-        _c1.metric("Total Family NAV", f"${_total_mkt_usd:,.0f}", f"\u0e3f{_total_mkt_usd*fx_r:,.0f}")
-        _c2.metric("Combined Income/mo", f"${_total_income_mo:.2f}", "net after WHT")
-        _c3.metric("Accounts", str(len(_all_accounts)))
-        _c4.metric("Annual income est.", f"${_total_income_mo*12:,.0f}")
+        # ── KPI header row ────────────────────────────────────────────────────
+        _total_mkt_usd_disp = _total_mkt_thb / fx_r if fx_r else 0.0
+        _c1, _c2, _c3, _c4 = st.columns(4)
+        _c1.metric("Total Family NAV (฿)", f"\u0e3f{_total_mkt_thb:,.0f}",
+                   f"≈ ${_total_mkt_usd_disp:,.0f}")
+        _c2.metric("Combined USD Income/mo", f"${_total_income_mo:.2f}",
+                   "net after WHT (USD accounts)")
+        _c3.metric("Active Accounts", str(len(_all_accounts)))
+        _c4.metric("USD Annual income est.", f"${_total_income_mo * 12:,.0f}")
+
         st.divider()
-        st.dataframe(pd.DataFrame(_family_rows), width="stretch", hide_index=True)
+        st.dataframe(pd.DataFrame(_family_rows), use_container_width=True, hide_index=True)
+
+        # ── THB value bar chart (all accounts share same currency base) ───────
         if len(_family_rows) > 1:
-            _vals = [float(r["Income/mo (net)"].replace("$","")) for r in _family_rows]
-            _fig = go.Figure(go.Bar(
-                x=[r["Account"] for r in _family_rows], y=_vals,
-                text=[f"${v:.2f}/mo" for v in _vals], textposition="auto",
-                marker_color=[a.get("accent","#2E5BA8") for a in _all_accounts[:len(_family_rows)]]))
-            _fig.update_layout(title="Monthly income by account", height=260,
-                               margin=dict(l=0,r=0,t=30,b=0), yaxis_title="USD/month")
-            st.plotly_chart(_fig, width="stretch")
+            try:
+                _bar_vals   = []
+                _bar_labels = []
+                _bar_colors = []
+                for _row, _a in zip(_family_rows, _all_accounts):
+                    _raw = _row["Mkt Value (฿)"].replace("\u0e3f", "").replace(",", "")
+                    try:
+                        _bar_vals.append(float(_raw))
+                    except ValueError:
+                        _bar_vals.append(0.0)
+                    _bar_labels.append(_row["Account"])
+                    _bar_colors.append(_a.get("accent", "#2E5BA8"))
+
+                _fig = go.Figure(go.Bar(
+                    x=_bar_labels, y=_bar_vals,
+                    text=[f"\u0e3f{v:,.0f}" for v in _bar_vals],
+                    textposition="auto",
+                    marker_color=_bar_colors,
+                ))
+                _fig.update_layout(
+                    title="Market Value by Account (THB)",
+                    height=280, margin=dict(l=0, r=0, t=40, b=0),
+                    yaxis_title="THB",
+                )
+                st.plotly_chart(_fig, use_container_width=True)
+            except Exception as _chart_e:
+                st.warning(f"Chart error: {_chart_e}")
     else:
-        st.info("No accounts with holdings found. Check config/accounts.yaml.")
+        st.info("No accounts found. Check config/accounts.yaml.")
