@@ -23,7 +23,7 @@ accounts:
     account_type: "Thailand domestic asset investing"
     active: true
 
-  - id: "005-8-95518-3"
+  - id: "005895518-3"
     display_name: "KAsset Wisdom (K-FIXED-A)"
     broker: "KAsset (Kasikorn Asset Management)"
     platform: "Finnomena"
