@@ -270,4 +270,4 @@ data: KAsset Wisdom account 005-8-95518-3 — K-FIXED-A ฿1,396,284.70
 
 ## Licence
 
-Private — not for redistribution.
+MIT
