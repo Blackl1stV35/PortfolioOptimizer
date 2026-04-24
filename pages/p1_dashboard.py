@@ -315,6 +315,10 @@ def _render_transaction_wizard(cfg, active, holdings, fx_r):
     if txns:
         st.markdown("**Transaction history** (editable)")
         txn_df = pd.DataFrame(txns)
+        # Convert date strings → datetime so DateColumn works;
+        # keep all other string cols as-is for compatibility.
+        if "date" in txn_df.columns:
+            txn_df["date"] = pd.to_datetime(txn_df["date"], errors="coerce")
         edited_txns = st.data_editor(
             txn_df,
             column_config={
@@ -331,7 +335,11 @@ def _render_transaction_wizard(cfg, active, holdings, fx_r):
         )
         if st.button("💾 Save transaction changes", key="save_txns"):
             cfg2 = dict(cfg)
-            cfg2["transactions"] = edited_txns.to_dict("records")
+            rows = edited_txns.copy()
+            # Convert datetime back to ISO date strings for YAML storage
+            if "date" in rows.columns:
+                rows["date"] = rows["date"].astype(str).str[:10]
+            cfg2["transactions"] = rows.to_dict("records")
             save_cfg(cfg2, active["id"])
             github_push(cfg2, "transactions edited")
             st.success("Transactions saved."); st.rerun()

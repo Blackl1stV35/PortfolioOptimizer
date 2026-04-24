@@ -77,7 +77,10 @@ def run_in_thread(fn: Callable, *args, **kwargs) -> Future:
 
 def ledoit_wolf_cov(returns: pd.DataFrame | np.ndarray) -> np.ndarray:
     """Analytical Nonlinear Shrinkage (Ledoit-Wolf 2020). Falls back to OAS."""
-    R = returns.values if isinstance(returns, pd.DataFrame) else np.asarray(returns, dtype=np.float64)
+    R = returns.values if isinstance(returns, pd.DataFrame) else np.asarray(returns)
+    # Julia requires a dense, column-major (Fortran-order) Float64 matrix.
+    # np.asfortranarray ensures juliacall sees Matrix{Float64} not PyArray.
+    R = np.asfortranarray(R, dtype=np.float64)
     if _init_julia():
         try:
             t0 = time.perf_counter()
@@ -102,7 +105,8 @@ def monte_carlo(
     Multi-threaded Monte Carlo.
     Returns (value_paths, income_paths) each shaped (n_paths, n_months).
     """
-    R = returns.values if isinstance(returns, pd.DataFrame) else np.asarray(returns, dtype=np.float64)
+    R = returns.values if isinstance(returns, pd.DataFrame) else np.asarray(returns)
+    R = np.asfortranarray(R, dtype=np.float64)
     w = np.asarray(weights, dtype=np.float64)
     w = w / w.sum()
 
@@ -163,7 +167,8 @@ def risk_metrics(
     weights : np.ndarray,
     rf      : float = 0.045 / 12,
 ) -> dict:
-    R = returns.values if isinstance(returns, pd.DataFrame) else np.asarray(returns, dtype=np.float64)
+    R = returns.values if isinstance(returns, pd.DataFrame) else np.asarray(returns)
+    R = np.asfortranarray(R, dtype=np.float64)
     w = np.asarray(weights, dtype=np.float64); w /= w.sum()
     if _init_julia():
         try:
@@ -272,7 +277,7 @@ def max_sharpe(returns, rf: float = 0.045/12):
     """Max-Sharpe weights via Julia (replaces rp.Portfolio.optimization)."""
     import numpy as np
     R = returns.values if hasattr(returns, "values") else returns
-    R = R.astype(np.float64)
+    R = np.asfortranarray(R, dtype=np.float64)
     n = R.shape[1]
     if _init_julia():
         try:
@@ -289,7 +294,7 @@ def min_cvar(returns, alpha: float = 0.95):
     """Min-CVaR portfolio weights via Julia."""
     import numpy as np
     R = returns.values if hasattr(returns, "values") else returns
-    R = R.astype(np.float64)
+    R = np.asfortranarray(R, dtype=np.float64)
     n = R.shape[1]
     if _init_julia():
         try:
@@ -306,7 +311,7 @@ def hrp(returns):
     """Hierarchical Risk Parity weights via Julia."""
     import numpy as np
     R = returns.values if hasattr(returns, "values") else returns
-    R = R.astype(np.float64)
+    R = np.asfortranarray(R, dtype=np.float64)
     n = R.shape[1]
     if _init_julia():
         try:

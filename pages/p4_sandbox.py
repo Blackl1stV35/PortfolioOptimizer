@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-import streamlit.components.v1 as components
 
 from core import load_returns, t, get_lang
 
@@ -413,7 +412,14 @@ function animate(){{requestAnimationFrame(animate);if(!isDragging)group.rotation
 animate();
 </script></body></html>"""
 
-    components.html(html, height=430)
+    # Render Three.js scene via st.html (Streamlit 1.35+).
+    # st.components.v1.html is deprecated after 2026-06-01.
+    try:
+        st.html(html)
+    except AttributeError:
+        # Streamlit <1.35 fallback — upgrade Streamlit to fix this warning
+        st.warning("Upgrade Streamlit to ≥1.35 for full Three.js support.")
+        st.code(html[:200] + "…", language="html")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

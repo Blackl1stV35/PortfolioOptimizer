@@ -1,517 +1,273 @@
-# Portfolio Analytics System
+# PortfolioOptimizer v4
 
-> Personal quantitative income portfolio research tool —  
-> built on Riskfolio-Lib, Python, Julia acceleration, SEC EDGAR intelligence, and macro monitoring.
-
----
-
-## Dashboard Preview
-
-### Backtest Results
-
-<div style="display: flex; justify-content: space-around;">
-  <figure style="flex:1; text-align:center; margin:10px;">
-    <img src="/output/plots/backtest_equity.png" style="width:100%; height:auto;"/>
-    <figcaption>Walk-Forward Equity Curves</figcaption>
-  </figure>
-  <figure style="flex:1; text-align:center; margin:10px;">
-    <img src="/output/plots/backtest_sharpe.png" style="width:100%; height:auto;"/>
-    <figcaption>Rolling Sharpe Ratio</figcaption>
-  </figure>
-</div>
-
-### FX Signal & Generational Plan
-
-<div style="display: flex; justify-content: space-around;">
-  <figure style="flex:1; text-align:center; margin:10px;">
-    <img src="/output/plots/fx_signal.png" style="width:100%; height:auto;"/>
-    <figcaption>USD/THB FX Signal</figcaption>
-  </figure>
-  <figure style="flex:1; text-align:center; margin:10px;">
-    <img src="/output/plots/generational_plan.png" style="width:100%; height:auto;"/>
-    <figcaption>Generational Wealth Plan</figcaption>
-  </figure>
-</div>
-
-### Distribution & Composition
-
-<div style="display: flex; justify-content: space-around;">
-  <figure style="flex:1; text-align:center; margin:10px;">
-    <img src="/output/plots/hist.png" style="width:100%; height:auto;"/>
-    <figcaption>Portfolio Returns Histogram</figcaption>
-  </figure>
-  <figure style="flex:1; text-align:center; margin:10px;">
-    <img src="/output/plots/pie.png" style="width:100%; height:auto;"/>
-    <figcaption>Max Sharpe Allocation</figcaption>
-  </figure>
-</div>
-
-### Risk Contribution
-
-<div style="display: flex; justify-content: center;">
-  <figure style="flex:1; text-align:center; margin:10px; max-width:60%;">
-    <img src="/output/plots/risk_con.png" style="width:100%; height:auto;"/>
-    <figcaption>Risk Contribution per Asset</figcaption>
-  </figure>
-</div>
+**Private family income portfolio management system.**  
+Thai retail investor focus · USD income assets · KAsset THB mutual fund · Multi-account · AI-assisted
 
 ---
 
-## What this does
+## What this is
 
-This system replaces the K CYBER TRADE app's analytics with a full quantitative
-research environment. It reads your holdings and transaction history from a single
-YAML file, fetches live prices from Yahoo Finance, pulls authoritative data directly
-from SEC EDGAR filings, monitors macro conditions affecting the portfolio, runs
-portfolio optimisation using Riskfolio-Lib, and outputs a 12-sheet Excel report
-plus a live 12-page browser dashboard.
-
-Every feature degrades gracefully — Julia is optional, the Streamlit UI is optional,
-email alerts are optional, and edgartools falls back cleanly when unavailable. At
-minimum, the core engine runs with only `riskfolio-lib`, `yfinance`, `pyyaml`,
-and `openpyxl`.
+A multi-page Streamlit application that tracks, analyses, and optimises a generational income portfolio across three brokerage accounts. It is not a general-purpose tool — it is built around the specific needs of a Thai investor holding USD income assets (BKLN, ARCC, PDI) and a Thai fixed-income mutual fund (K-FIXED-A), with a 30-year wealth-building mandate.
 
 ---
 
-## Features
+## Accounts managed
 
-**Portfolio optimisation**  
-Eight strategies via Riskfolio-Lib v7: Maximum Sharpe (MV, CVaR, Sortino),
-Minimum Variance, Minimum CVaR, Minimum Max Drawdown, Hierarchical Risk Parity,
-and Equal Weight. Black-Litterman forward views can be added in `config/views.yaml`
-to make weight recommendations forward-looking rather than purely historical.
-
-**Julia acceleration**  
-An optional Julia bridge provides Analytical Nonlinear Shrinkage covariance
-estimation (Ledoit-Wolf 2018, QIS) and multi-threaded Monte Carlo simulation.
-The system falls back transparently to Python/sklearn when Julia is absent.
-
-**Walk-forward backtest**  
-Rolling 24-month training window with out-of-sample performance evaluation.
-Outputs normalised equity curves and rolling Sharpe ratios for all strategies.
-
-**30-year generational planner**  
-10,000-path bootstrap Monte Carlo producing p10/p50/p90 portfolio value bands,
-monthly income projections, inflation-adjusted real values, and the median time
-to reach a target passive income level. Designed for the indefinite hold thesis.
-
-**Macro Pulse & Risk Dashboard**  
-Single-screen macro monitor covering the six indicators that directly drive BKLN,
-ARCC, and PDI performance: Thai BOT policy rate, US Fed funds rate, VIX, WTI oil,
-USD/THB FX signal, and US recession probability. Four analysis tabs cover policy
-rates, risk gauges (default, liquidity, maturity, uncertainty), an economic snapshot,
-and a dynamic cash deployment recommendation. The regime engine (Defensive / Neutral /
-Aggressive) adjusts suggested cash allocation and PDI deployment percentage in
-real time based on the composite macro score.
-
-**SEC EDGAR Intelligence (edgartools)**  
-Direct integration with SEC EDGAR filings — no API key, no cost, no rate limits.
-Pulls ARCC dividend declarations from 8-K filings 1-3 days before aggregators
-publish them. Extracts NAV per share and Net Investment Income per share from
-10-Q XBRL data to compute the dividend coverage ratio — the single most important
-metric for assessing whether ARCC's $0.48 quarterly dividend is sustainable.
-Monitors unrealised portfolio depreciation as an early-warning signal for BDC stress.
-Tracks executive Form 4 insider trades. Includes a one-click BDC candidate screener
-for evaluating PFLT, MAIN, HTGC, and others before adding them to the portfolio.
-
-**FX timing signal**  
-Computes a 90-day z-score of the USD/THB rate. A negative z-score indicates the
-USD is historically cheap — the optimal window to convert THB savings to USD for
-the next DCA tranche.
-
-**DCA price alerts**  
-Zone-based triggers for each ticker (strong buy / buy / hold / reassess). Fires a
-Windows desktop notification and optional email when a ticker enters an actionable zone.
-
-**Withholding tax reconciliation**  
-Back-calculates the implied WHT rate from KS app THB amounts and compares it against
-30% (default US rate) and 15% (Thailand-US treaty rate). Flags whether filing a
-W-8BEN form with KS would recover meaningful income.
-
-**Dividend calendar**  
-Generates an iCalendar `.ics` file from confirmed and projected dividend dates.
-Importable into Google Calendar, Apple Calendar, and Outlook.
-
-**12-sheet Excel report**  
-Produced on every run with all analytics, charts, projections, and a dedicated
-Macro Pulse sheet.
-
-**Streamlit dashboard**  
-12-page browser interface covering all features. Deployable free on Streamlit
-Community Cloud.
-
-**Autonomous operation**  
-Save `config/portfolio.yaml` and the watchdog fires the full analysis within 2.5
-seconds. A time-based scheduler runs the full report every Monday at 18:00 and
-price alerts on weekdays at 16:45.
+| ID | Account | Currency | Contents |
+|----|---------|----------|----------|
+| `397543-7` | K CYBER TRADE (Kasikorn Securities) | USD | BKLN 192sh · ARCC 133sh · PDI 105sh |
+| `722379-7` | K CYBER TRADE (Kasikorn Securities) | THB | Cash only — Thai domestic account |
+| `005-8-95518-3` | KAsset Wisdom (Finnomena) | THB | K-FIXED-A ฿1,396,284.70 |
 
 ---
 
 ## Project structure
 
 ```
-portfolio_analytics/
-├── app.py                          ← Streamlit dashboard (server entry point)
-├── riskfolio_autonomous.py         ← Local engine entry point
-├── watchdog_runner.py              ← File-change auto-trigger
+PortfolioOptimizer/
+├── app.py                        Entry point — 85 lines of pure routing
+├── core.py                       Shared runtime: accounts, YAML I/O, cache, sidebar
 ├── requirements.txt
-├── config/
-│   ├── portfolio.yaml              ← All holdings, transactions, dividends, macro rates
-│   └── views.yaml                  ← Black-Litterman forward views
-├── engine/
-│   ├── analytics.py                ← Covariance, Monte Carlo, risk metrics (Python-only)
-│   ├── julia_bridge.py             ← Python-Julia bridge (graceful fallback)
-│   ├── julia_engine.jl             ← Julia PortfolioEngine module
-│   ├── alerts.py                   ← DCA price alerts (toast + email)
-│   ├── fx_timing.py                ← USD/THB z-score conversion signal
-│   ├── dividend_calendar.py        ← .ics calendar generator
-│   ├── wht_reconciliation.py       ← Withholding tax audit
-│   ├── black_litterman.py          ← Black-Litterman view integration
-│   ├── backtest.py                 ← Walk-forward backtest engine
-│   ├── generational_planner.py     ← 30-year Monte Carlo wealth planner
-│   ├── report_builder.py           ← Excel report (server build)
-│   ├── macro_monitor.py            ← Macro Pulse & Risk Dashboard engine
-│   └── edgar_monitor.py            ← SEC EDGAR intelligence via edgartools
+│
 ├── pages/
-│   ├── 03_Macro_Pulse.py           ← Macro dashboard Streamlit page
-│   └── 04_SEC_Intelligence.py      ← SEC EDGAR Streamlit page
-├── scheduler/
-│   └── run_weekly.py               ← Time-based autonomous scheduler
-├── ui/
-│   └── app.py                      ← Local Streamlit app
-└── output/                         ← Generated reports (auto-created)
-    ├── portfolio_report_YYYYMMDD.xlsx
-    ├── portfolio_dividends.ics
-    └── plots/
-        ├── backtest_equity.png
-        ├── backtest_sharpe.png
-        ├── fx_signal.png
-        ├── generational_plan.png
-        ├── hist.png
-        ├── pie.png
-        ├── risk_con.png
-        ├── frontier.png
-        └── drawdown.png
+│   ├── p1_dashboard.py           Dashboard: overview, prices, dividend calendar, WHT, transactions
+│   ├── p2_intelligence.py        Intelligence Hub: macro, SEC EDGAR, FX timing
+│   ├── p3_analytics.py           Analytics: risk, backtest, Monte Carlo, generational plan, charts
+│   ├── p4_sandbox.py             Sandbox: What-If, 3D frontier (Plotly + Three.js), exit simulator
+│   ├── p5_accounts.py            Account manager: consolidated view, settings, cash transfers
+│   ├── p6_research.py            AI research agent (Groq streaming)
+│   └── p7_family.py              Family overview (shown when 2+ accounts)
+│
+├── engine/
+│   ├── julia_engine.jl           Julia worker: LW covariance, MC, gen plan, max-Sharpe, HRP
+│   ├── julia_bridge.py           Python↔Julia bridge (juliacall, Python fallback)
+│   ├── charts.py                 Advanced charts via pandas_ta (SMA/EMA/BB/RSI/MACD)
+│   ├── exit_simulator.py         Exit position impact: P&L, tax, income loss, 30yr generational
+│   ├── scenario_analyzer.py      What-If multi-asset optimizer
+│   ├── wht_reconciliation.py     WHT reconciliation with treaty band 12–22%
+│   ├── edgar_monitor.py          SEC EDGAR: ARCC 8-K, XBRL NAV/NII, BDC screener
+│   ├── analytics.py              Portfolio risk metrics
+│   ├── backtest.py               Walk-forward backtest
+│   ├── black_litterman.py        Black-Litterman model
+│   ├── dividend_calendar.py      Upcoming dividend event builder
+│   ├── fx_timing.py              USD/THB z-score signal
+│   ├── generational_planner.py   30-year generational plan
+│   ├── macro_monitor.py          VIX, yield curve, oil, FX macro indicators
+│   └── report_builder.py        (Legacy — kept for reference, Excel export removed)
+│
+├── utils/
+│   ├── i18n.py                   EN/TH language switching — t() helper
+│   ├── finnomena.py              KAsset/Finnomena NAV fetcher + YAML fallback
+│   ├── research_agent.py         Groq llama-3.3-70b-versatile streaming agent
+│   ├── llm_summarizer.py         Post-analysis AI summaries with session-state cache
+│   └── github_commit.py          GitHub PAT auto-commit after data mutations
+│
+└── config/
+    ├── accounts.yaml             Account registry (IDs, colours, YAML filenames)
+    ├── portfolio_397543-7.yaml   USD income account (BKLN/ARCC/PDI)
+    ├── portfolio_722379-7.yaml   THB cash account
+    └── portfolio_005895518-3.yaml KAsset Wisdom mutual fund account
 ```
 
 ---
 
-## Installation
+## Setup
+
+### 1. Install dependencies
 
 ```bash
-# Create and activate virtual environment
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-
-# Install all dependencies
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Julia (optional — 30-80x faster Monte Carlo)
+### 2. Configure secrets
 
-`juliacall` downloads Julia 1.10 LTS automatically on first import (one-time, ~200 MB).
-`CovarianceEstimation.jl` installs automatically on first bridge initialisation (~30 s).
+Copy `.streamlit/secrets.toml.template` → `.streamlit/secrets.toml` and fill in:
 
-```bash
-# Windows — add to System Environment Variables:
-JULIA_NUM_THREADS=auto
+```toml
+[github]
+pat      = "ghp_..."            # GitHub Personal Access Token (for auto-commit)
+repo_url = "https://github.com/Blackl1stV35/PortfolioOptimizer"
 
-# macOS / Linux:
-export JULIA_NUM_THREADS=auto
+[groq]
+api_key = "gsk_..."             # From console.groq.com — free tier
+
+[account_pins]
+# Not required — PIN gate removed. Accounts switch by button click.
 ```
 
-### SEC EDGAR identity (required for edgartools)
+> **Never commit `secrets.toml`.** It is already in `.gitignore`.
 
-The SEC requires a courtesy user-agent header for all programmatic access.
-Add your email to `config/portfolio.yaml` — this is not authentication.
-
-```yaml
-edgar:
-  identity: "your.name@email.com"
-```
-
----
-
-## Running
-
-### One-off report
-
-```bash
-python riskfolio_autonomous.py
-```
-
-Output: `output/portfolio_report_YYYYMMDD.xlsx`
-
-### Auto-trigger on YAML save
-
-```bash
-python watchdog_runner.py
-```
-
-Edit and save `config/portfolio.yaml` — the full analysis fires automatically
-within 2.5 seconds.
-
-### Browser dashboard
+### 3. Run
 
 ```bash
 streamlit run app.py
 ```
 
-Opens `http://localhost:8501`
+---
 
-### Scheduled (Monday 18:00 + weekday alerts)
+## Julia acceleration (optional)
+
+Julia provides sub-3-second Monte Carlo (5,000 × 360 months), Ledoit-Wolf covariance, Max-Sharpe, Min-CVaR, and HRP optimisation. Without Julia, Python/NumPy fallbacks are used automatically.
 
 ```bash
-pip install schedule
-python scheduler/run_weekly.py
+# Install Julia (https://julialang.org/downloads/)
+# Then:
+pip install juliacall
+# On first run, Julia initialises once via @st.cache_resource
+```
+
+Julia is **not required** for the app to function.
+
+---
+
+## Pages
+
+### 📊 Dashboard
+- **Overview** — live market values in USD and THB, unrealised P&L per holding (live prices via yfinance)
+- **Price & History** — 6-timeframe interactive price chart (1M → MAX) with monthly return bars
+- **Dividend Calendar** — smart checklist for upcoming dividends with ✅ confirm flow; auto-updates portfolio YAML; ICS export for Google/Apple/Outlook Calendar
+- **Tax & Reconciliation** — WHT implied rate back-calculation; treaty band 12–22% (W-8BEN validated); auto-detects 15% treaty vs 30% default
+- **Transactions** — editable `st.data_editor` ledger + step-by-step add-transaction wizard with live price autofill, impact preview, and optional GitHub push
+
+### 🔍 Intelligence Hub
+- **Macro Pulse** — Thai policy rate, US Fed rate, VIX, oil, yield curve, recession probability, macro regime (Aggressive / Neutral / Defensive) with cash deployment recommendation
+- **SEC EDGAR** — ARCC 8-K dividend declarations, XBRL NAV/NII fundamentals, insider Form 4 trades, BDC candidate screener
+- **FX Timing** — USD/THB 90-day z-score signal with deployment recommendation
+
+### 🧪 Analytics Engine
+- **Risk & Optimisation** — per-asset risk metrics (Sharpe, CVaR, Max Drawdown) via Julia; Max-Sharpe, Min-Variance, Min-CVaR weight tables; Groq AI summary
+- **Backtest** — walk-forward backtest across multiple strategies; Groq AI summary
+- **Monte Carlo** — 1,000–10,000 path simulation (Julia-accelerated); p10/p50/p90 fan chart; target income probability; Groq AI summary
+- **Generational Plan** — 30-year, 5,000-path plan; milestone table (Year 5/10/15/20/25/30); median time-to-target; Groq AI summary
+- **Advanced Charts** — pandas_ta technical indicators: SMA20/50, EMA20, Bollinger Bands, RSI(14), MACD(12,26,9); multi-asset overlay with benchmark comparison; 8 timeframes
+
+### 🔬 What-If & 3D Sandbox
+- **What-If Simulator** — add up to 3 tickers simultaneously; ±5% entry price sensitivity sub-scenarios; ΔSharpe / ΔCVaR / Δincome KPIs; before/after weight table; 5-year MC fan chart; sandbox checkbox (never writes to YAML until explicitly confirmed)
+- **3D Frontier** — Plotly WebGL 3D scatter: X=volatility, Y=return, Z=monthly income; coloured by Sharpe ratio; 2,000 random portfolios
+- **Three.js Bubble Chart** — interactive WebGL asset bubbles; drag to rotate, scroll to zoom, hover for details; size=weight, colour=yield
+- **Exit Simulator** — full exit impact: capital gain/loss, Thai CGT exemption note, lost monthly income, 30-year compounded income loss, portfolio concentration after exit
+
+### 👥 Account Manager
+- Consolidated NAV, income, and cash across all 3 accounts
+- Income bar chart by account
+- Per-account settings editor (FX rate, WHT rate, risk-free rate, income target)
+- Cash transfer recorder (bookkeeping only — no broker API)
+
+### 🤖 AI Research
+- Groq `llama-3.3-70b-versatile` streaming agent
+- Full portfolio context injected into system prompt (holdings, WHT, FX, strategy)
+- Responds in English or Thai based on language setting
+- 7 curated starter questions in both languages
+
+---
+
+## KAsset / Finnomena NAV
+
+The Finnomena API is Cloudflare-blocked from server environments. NAV is managed manually:
+
+1. Open **Dashboard → KAsset Wisdom account → Overview**
+2. Expand **"Update NAV manually"**
+3. Enter NAV per unit + total market value → **Update NAV**
+4. The app stores the entry in `portfolio_005895518-3.yaml → nav_history`
+5. A ⚠️ stale warning appears if data is more than 3 days old
+
+---
+
+## Language switching
+
+Click the **🌐 ภาษาไทย / English** button at the bottom of the sidebar. All UI labels, navigation items, and metric names switch. AI Research responses also switch language based on this setting.
+
+---
+
+## Data flow
+
+```
+YAML files (primary) ──→ core.load_cfg()
+                              │
+                              ├── render_sidebar()   (once per re-run)
+                              │
+                              └── pages/pN.render()  (only active page re-runs)
+                                        │
+                                        ├── yfinance  (prices, FX — cached 5 min)
+                                        ├── Julia     (heavy compute — cached resource)
+                                        ├── Groq      (summaries — session-state cache)
+                                        └── Finnomena (NAV — YAML fallback)
+                                        │
+                                    save_cfg()
+                                        │
+                                        ├── YAML write
+                                        ├── Supabase dual-write (Phase 2 hook, optional)
+                                        └── GitHub auto-commit (if PAT configured)
 ```
 
 ---
 
-## Updating your portfolio
+## WHT reconciliation logic
 
-### Adding a trade
+| Implied WHT | Verdict | Meaning |
+|-------------|---------|---------|
+| < 5% | no_data | KS data missing or zero |
+| 12–22% | **treaty_15** ✅ | W-8BEN applied (18% band accounts for KS FX rounding) |
+| 27–33% | default_30 ⚠️ | Standard US withholding — file W-8BEN with KS |
+| > 35% | overpaid ❌ | Contact KS |
+| Other | partial | Unusual — verify KS statement |
 
-Open `config/portfolio.yaml`, scroll to `transactions:`, and append:
+W-8BEN treaty rate (15%) validated on account 397543-7 as of 2026-04-14.
 
-```yaml
-- id: "T004"
-  date: "2026-04-15"
-  type: "BUY"
-  ticker: "BKLN"
-  exchange: "ARCX"
-  currency: "USD"
-  shares: 50
-  price_usd: 20.75
-  gross_usd: 1037.50
-  commission_usd: 5.34
-  total_usd: 1042.84
-  note: "Q2 2026 DCA tranche"
-```
+---
 
-Alternatively, use the Streamlit **Trade Entry** page — no YAML editing needed.
+## Dividend calendar — upcoming (as of 2026-04-14)
 
-### Logging a received dividend
+| Ticker | Ex-date | Pay-date | Eligible shares | Est. gross | Est. net (15% WHT) |
+|--------|---------|----------|-----------------|------------|---------------------|
+| PDI | 2026-04-13 | 2026-05-01 | 105 | $23.15 | $19.68 |
+| BKLN | 2026-04-23 | 2026-04-27 | 192 | $19.20 | $16.32 |
+| PDI | 2026-05-11 | 2026-06-01 | 105 | $23.15 | $19.68 |
+| BKLN | 2026-05-28 | 2026-06-01 | 192 | $19.20 | $16.32 |
+| **ARCC** | **2026-06-12** | **2026-06-30** | **133** | **$63.84** | **$54.26** |
+| BKLN | 2026-06-25 | 2026-06-27 | 192 | $19.20 | $16.32 |
+| PDI | 2026-06-12 | 2026-07-01 | 105 | $23.15 | $19.68 |
 
-Append to `dividends_received:` in `config/portfolio.yaml`:
+> ⚠️ ARCC Q1 2026 dividend **missed** — shares purchased 2026-03-25, ex-date was 2026-03-12.
 
-```yaml
-- period: "2026-04"
-  ticker: "BKLN"
-  shares_eligible: 192
-  ex_date: "2026-04-23"
-  pay_date: "2026-04-27"
-  amount_per_share_usd: 0.100
-  gross_usd_estimated: 19.20
-  wht_rate_assumed: 0.30
-  net_usd_estimated: 13.44
-  thb_ks_app: 460.00
-  source: "Actual"
-  status: "received"
-```
+---
 
-The `thb_ks_app` field triggers the WHT Reconciliation module to back-calculate
-the effective rate and determine whether 15% or 30% is being applied.
+## Hosting
 
-### Updating macro rates
+### Current: Streamlit Community Cloud
+Free, 1 app, ~1 GB RAM. Julia not available (Python fallback active). Suitable for current portfolio size.
 
-After each BOT or Fed meeting, update `config/portfolio.yaml`:
+### Recommended upgrade: Hugging Face Spaces
+Free, always-on, 16 GB RAM, Julia installable via Dockerfile. Zero cold starts.
 
-```yaml
-macro:
-  thai_policy_rate:      1.00
-  thai_policy_rate_date: "2026-04-09"
-  us_fed_rate:           3.625
-  us_fed_rate_date:      "2026-03-19"
-```
-
-### Updating market views
-
-Edit `config/views.yaml`. The Black-Litterman model re-runs on the next cycle,
-blending your forward-looking views with historical returns to produce adjusted
-expected returns.
-
-### Version control
-
-```bash
-git init
-git add .
-git commit -m "Initial portfolio setup"
-
-# After each trade:
-git commit -am "BUY BKLN 50sh @ $20.75 — T004"
+```dockerfile
+FROM python:3.11-slim
+RUN apt-get update && apt-get install -y curl
+RUN curl -fsSL https://install.julialang.org | sh
+COPY . /app
+WORKDIR /app
+RUN pip install -r requirements.txt
+RUN echo 'juliacall>=0.9.0' >> requirements.txt && pip install juliacall
+CMD ["streamlit", "run", "app.py", "--server.port=7860"]
 ```
 
 ---
 
-## Configuration reference
+## Git commit convention
 
-All key parameters live in `config/portfolio.yaml`.
+Auto-commits are triggered after: dividend confirmation, trade logging, What-If apply, NAV update.
 
-| Parameter | Location | Default | Update when |
-|-----------|----------|---------|-------------|
-| `fx_usd_thb` | `meta` | `32.68` | FX rate moves more than 1 THB |
-| `wht_active` | `settings` | `0.30` | KS confirms W-8BEN treaty rate → set to `0.15` |
-| `risk_free_rate_annual` | `settings` | `0.045` | US T-bill rate changes significantly |
-| `dca_monthly_budget_thb` | `analysis` | `51000` | Monthly investment amount changes |
-| `target_monthly_income_usd` | `analysis` | `1000.0` | Income target changes |
-| `cash_reserve_thb` | `analysis` | `92000` | Available cash for deployment decisions |
-| `thai_policy_rate` | `macro` | `1.00` | After each BOT MPC meeting |
-| `us_fed_rate` | `macro` | `3.625` | After each FOMC meeting |
-| `identity` | `edgar` | — | One-time setup (your email for SEC courtesy header) |
-
----
-
-## Dashboard pages
-
-| Page | Contents |
-|------|----------|
-| Dashboard | Live holdings, KPI cards, 6-month price chart, ARCC dividend alert |
-| Trade Entry | Form → download updated YAML to commit |
-| Analytics & Optimisation | Risk metrics, 8 strategy weights, all Riskfolio charts |
-| Dividend Tracker | History + projected + .ics calendar download + KS amount logger |
-| FX Timing | USD/THB z-score signal + DCA budget calculator |
-| Monte Carlo | Fan chart, p10/p50/p90 income projection |
-| Generational Plan | 30-year milestone table + fan chart |
-| WHT Reconciliation | 30% vs 15% back-calculation from KS app amounts |
-| Backtest | Walk-forward equity curves + rolling Sharpe by strategy |
-| Macro Pulse | Policy rates, risk gauges, economic snapshot, cash deployment recommendation |
-| SEC Intelligence | ARCC 8-K dividend declarations, NAV/NII XBRL, insider trades, BDC screener |
-| Download Report | Generates and downloads the full 12-sheet Excel report |
-
----
-
-## Excel report — sheet guide
-
-| Sheet | Contents |
-|-------|----------|
-| Dashboard | KPI summary, holdings snapshot, active alert status |
-| Position P&L | Per-asset P&L computed from transaction ledger |
-| Transactions | Full trade history |
-| Dividend Tracker | Received and projected dividends with WHT breakdown |
-| WHT Reconciliation | 30% vs 15% audit per dividend payment period |
-| Risk Metrics | Sharpe, Sortino, CVaR, Max Drawdown, Omega per asset |
-| Optimal Weights | All 8 strategies (BL-adjusted when views are active) |
-| Riskfolio Charts | Allocation pie, Frontier, Risk Contribution, Histogram, Drawdown |
-| Backtest | Walk-forward equity curves and rolling Sharpe ratios |
-| Generational Plan | 30-year p10/p50/p90 wealth and income fan charts |
-| FX Timing | USD/THB z-score signal and DCA budget breakdown |
-| Macro Pulse | Regime summary, all 6 macro indicators with signals |
-
----
-
-## Macro Pulse — indicator guide
-
-| Indicator | Source | Why it matters to this portfolio |
-|-----------|--------|----------------------------------|
-| Thai BOT policy rate | Manual (portfolio.yaml) | Cost of THB savings; affects FX conversion timing |
-| US Fed funds rate | Manual (portfolio.yaml) | BKLN floating coupons reprice against SOFR quarterly |
-| VIX | yfinance `^VIX` | High VIX compresses BDC/CEF valuations; signals entry opportunities |
-| WTI oil | yfinance `CL=F` | Oil > $95 triggers Defensive posture |
-| USD/THB FX signal | engine/fx_timing.py | Negative z-score = cheap USD = optimal conversion window |
-| Recession probability | 2s10s curve proxy | Deep inversion → elevated probability → reduce ARCC sizing |
-| HYG vs LQD (credit) | yfinance | HY underperformance = rising default risk = ARCC headwind |
-| 2s10s spread | yfinance `^IRX` / `^TNX` | Inversion precedes recession by 12-18 months |
-
-**Regime thresholds**
-
-| Score | Regime | Cash suggestion | Action |
-|-------|--------|-----------------|--------|
-| 7–10 | Defensive | 22–25% | Hold cash; delay PDI deployment |
-| 4–6 | Neutral | 15–20% | Deploy 50% cautiously; split PDI / BKLN |
-| 0–3 | Aggressive | 10–15% | DCA into BKLN and PDI this week |
-
----
-
-## SEC EDGAR Intelligence — what edgartools provides
-
-| Data | Filing | Frequency | Value |
-|------|--------|-----------|-------|
-| Dividend declarations | 8-K | Quarterly | Confirms amount and dates 1-3 days before aggregators |
-| NAV per share | 10-Q XBRL | Quarterly | True asset value; rising NAV = healthy BDC |
-| NII per share | 10-Q XBRL | Quarterly | Must exceed $0.48 for coverage ≥ 1.0x |
-| Dividend coverage ratio | Computed | Quarterly | Key sustainability metric; < 1.0x = red flag |
-| Unrealised depreciation | 10-Q XBRL | Quarterly | BDC early-warning signal |
-| Executive insider trades | Form 4 | As filed | Management buying = conviction signal |
-| BDC candidate screen | XBRL multi-ticker | On demand | NAV trend + coverage for PFLT, MAIN, HTGC |
-
----
-
-## Server deployment (free)
-
-### Streamlit Community Cloud — recommended
-
-Free, always-on, no credit card required.
-
-1. Push this repository to a private GitHub repository
-2. Sign in to [share.streamlit.io](https://share.streamlit.io) with GitHub
-3. Click **New app** → select repository → Main file: `app.py` → Deploy
-4. App is live at `https://your-app-name.streamlit.app`
-
-To restrict access: Settings → Sharing → Viewers must be logged in → add your email.
-
-**Updating data:** The Trade Entry and Dividend Tracker pages include a
-**Download updated portfolio.yaml** button. Download it, navigate to
-`config/portfolio.yaml` in GitHub, click edit, paste the content, and commit.
-Streamlit redeploys in ~60 seconds.
-
-### Render.com — alternative
-
-Free tier spins down after 15 minutes of inactivity and restarts in ~30 seconds.
-
-- **Build command:** `pip install -r requirements.txt`
-- **Start command:** `streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
-
----
-
-## Citation
-
-This project uses **Riskfolio-Lib** for all portfolio optimisation and risk analytics.
-Please cite the library in any published or shared research that uses outputs from
-this system.
-
-```bibtex
-@misc{riskfolio,
-      author = {Dany Cajas},
-      title  = {Riskfolio-Lib (7.2.1)},
-      year   = {2026},
-      url    = {https://github.com/dcajasn/Riskfolio-Lib},
-}
+```
+feat: multi-account + Groq LLM + Julia + 3D sandbox
+fix: WHT treaty band 12-22%, snapshot key resolver, PyArrow KS THB
+data: portfolio_397543-7 — WHT 15% validated, mkt value $8,201.80
+data: KAsset Wisdom account 005-8-95518-3 — K-FIXED-A ฿1,396,284.70
 ```
 
-This project also uses **edgartools** for SEC EDGAR data access.
-
-```bibtex
-@software{edgartools,
-  author  = {Dany Gunning},
-  title   = {edgartools: Python library for SEC EDGAR filings},
-  url     = {https://github.com/dgunning/edgartools},
-  license = {MIT},
-}
-```
-
-Documentation:
-- Riskfolio-Lib: [riskfolio-lib.readthedocs.io](https://riskfolio-lib.readthedocs.io)
-- edgartools: [edgartools.readthedocs.io](https://edgartools.readthedocs.io)
-
 ---
 
-## Disclaimer
+## Licence
 
-This tool is for personal investment research only. Nothing produced by this system
-constitutes financial advice. All investments carry risk, including the possible loss
-of principal. Dividend projections are estimates and not guarantees. Withholding tax
-rates should be verified directly with K CYBER TRADE. SEC filing data is sourced
-directly from EDGAR and is subject to the SEC's terms of use. The author is not a
-licensed financial advisor.
-
----
-
-## License
-
-MIT — see `LICENSE`
+Private — not for redistribution.
