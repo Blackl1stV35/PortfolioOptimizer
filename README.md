@@ -1,4 +1,4 @@
-# PortfolioOptimizer v4
+# PortfolioOptimizer  
 
 **Private family income portfolio management system.**  
 Thai retail investor focus · USD income assets · KAsset THB mutual fund · Multi-account · AI-assisted
