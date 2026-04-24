@@ -231,7 +231,7 @@ dividends_received:
     gross_usd_estimated: 15.756
     wht_rate_assumed: 0.15
     net_usd_estimated: 13.393
-    thb_ks_app: 421.54
+    thb_ks_app: null
     source: KS app (part of 2026 YTD total 1356.92 THB)
     status: received
   - period: 2026-02
@@ -243,7 +243,7 @@ dividends_received:
     gross_usd_estimated: 15.6
     wht_rate_assumed: 0.15
     net_usd_estimated: 13.26
-    thb_ks_app: 421.54
+    thb_ks_app: null
     source: Confirmed ex/pay via stockanalysis.com
     status: received
   - period: 2026-03
@@ -255,9 +255,9 @@ dividends_received:
     gross_usd_estimated: 15.6
     wht_rate_assumed: 0.15
     net_usd_estimated: 13.26
-    thb_ks_app: 421.54
+    thb_ks_app: null
     source: Estimated T003 and T004 bought after ex-date not eligible
-    status: received
+    status: pending
 
 ks_app_snapshot_20260414:
   market_value_usd: 8201.80

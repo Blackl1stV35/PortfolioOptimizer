@@ -267,3 +267,54 @@ def _py_generational_plan(mu, vol, pv, monthly_add, n_paths,
         "p50_final":        float(np.percentile(vp[:, -1], 50)),
         "p90_final":        float(np.percentile(vp[:, -1], 90)),
     }
+
+def max_sharpe(returns, rf: float = 0.045/12):
+    """Max-Sharpe weights via Julia (replaces rp.Portfolio.optimization)."""
+    import numpy as np
+    R = returns.values if hasattr(returns, "values") else returns
+    R = R.astype(np.float64)
+    n = R.shape[1]
+    if _init_julia():
+        try:
+            w = np.array(_jl.PortfolioEngine.max_sharpe_weights(R, float(rf)))
+            w = np.maximum(w, 0)
+            s = w.sum()
+            return w/s if s > 0 else np.ones(n)/n
+        except Exception as exc:
+            log.warning("Julia max_sharpe failed: %s", exc)
+    return np.ones(n) / n
+
+
+def min_cvar(returns, alpha: float = 0.95):
+    """Min-CVaR portfolio weights via Julia."""
+    import numpy as np
+    R = returns.values if hasattr(returns, "values") else returns
+    R = R.astype(np.float64)
+    n = R.shape[1]
+    if _init_julia():
+        try:
+            w = np.array(_jl.PortfolioEngine.min_cvar_weights(R, float(alpha)))
+            w = np.maximum(w, 0)
+            s = w.sum()
+            return w/s if s > 0 else np.ones(n)/n
+        except Exception as exc:
+            log.warning("Julia min_cvar failed: %s", exc)
+    return np.ones(n) / n
+
+
+def hrp(returns):
+    """Hierarchical Risk Parity weights via Julia."""
+    import numpy as np
+    R = returns.values if hasattr(returns, "values") else returns
+    R = R.astype(np.float64)
+    n = R.shape[1]
+    if _init_julia():
+        try:
+            w = np.array(_jl.PortfolioEngine.hrp_weights(R))
+            w = np.maximum(w, 0)
+            s = w.sum()
+            return w/s if s > 0 else np.ones(n)/n
+        except Exception as exc:
+            log.warning("Julia HRP failed: %s", exc)
+    return np.ones(n) / n
+

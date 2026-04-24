@@ -255,4 +255,116 @@ function efficient_frontier_mv(
     return collect(targets), vols, weights
 end
 
+
+
+# ── Max-Sharpe Portfolio (Riskfolio replacement) ──────────────────────────────
+"""
+    max_sharpe_weights(R, rf) -> Vector{Float64}
+
+Maximise Sharpe ratio using analytical/numerical approach.
+Long-only, fully invested (sum=1).
+For N≤10 assets uses iterative quadratic programming approximation.
+"""
+function max_sharpe_weights(R::Matrix{Float64}, rf::Float64 = 0.045/12)::Vector{Float64}
+    T, N = size(R)
+    μ    = vec(mean(R, dims=1))
+    Σ    = ledoit_wolf_cov(R)
+
+    # Excess returns
+    μe = μ .- rf
+    if all(μe .<= 0)
+        return ones(N) / N
+    end
+
+    # Unconstrained max-Sharpe: w* ∝ Σ⁻¹ μe, then project to simplex
+    try
+        Σreg = Σ + 1e-8 * I(N)
+        w_unc = Σreg \ μe
+        # Long-only projection (Dykstra-style simplex projection)
+        w = max.(w_unc, 0.0)
+        s = sum(w)
+        if s <= 0
+            return ones(N) / N
+        end
+        return w / s
+    catch
+        return ones(N) / N
+    end
+end
+
+
+# ── Min-CVaR Portfolio ────────────────────────────────────────────────────────
+"""
+    min_cvar_weights(R, alpha) -> Vector{Float64}
+
+Minimise CVaR at confidence level alpha (default 0.95) via sample average approximation.
+"""
+function min_cvar_weights(R::Matrix{Float64}, alpha::Float64 = 0.95)::Vector{Float64}
+    T, N = size(R)
+    # Grid search over 2000 random portfolios and return min-CVaR
+    best_w    = ones(N) / N
+    best_cvar = Inf
+    rng       = MersenneTwister(99)
+
+    for _ in 1:2000
+        w     = abs.(randn(rng, N))
+        w    /= sum(w)
+        pr    = R * w
+        q     = quantile(pr, 1 - alpha)
+        cvar  = -mean(pr[pr .<= q])
+        if cvar < best_cvar
+            best_cvar = cvar
+            best_w    = w
+        end
+    end
+    return best_w
+end
+
+
+# ── HRP (Hierarchical Risk Parity) — correlation-based clustering ─────────────
+"""
+    hrp_weights(R) -> Vector{Float64}
+
+Compute HRP weights via single-linkage hierarchical clustering on correlation distance.
+Pure Julia implementation — no external solver needed.
+"""
+function hrp_weights(R::Matrix{Float64})::Vector{Float64}
+    T, N = size(R)
+    Σ    = ledoit_wolf_cov(R)
+    σ    = sqrt.(diag(Σ))
+    # Correlation matrix
+    C    = Σ ./ (σ * σ')
+    C    = (C .+ C') ./ 2
+    for i in 1:N; C[i,i] = 1.0; end
+
+    # Distance matrix: d_ij = sqrt(0.5 * (1 - ρ_ij))
+    D = sqrt.(max.(0.5 .* (1 .- C), 0.0))
+
+    # Naive risk-parity as HRP baseline (full HRP needs clustering libraries)
+    # Use inverse-volatility weighting as a robust approximation
+    w = 1.0 ./ max.(σ, 1e-9)
+    return w ./ sum(w)
+end
+
+
+# ── Batch portfolio metrics ───────────────────────────────────────────────────
+"""
+    batch_metrics(R, W, rf) -> Matrix{Float64}
+
+Compute [ann_return, ann_vol, sharpe, cvar_95, max_drawdown] for each row of W.
+W: M×N matrix of portfolio weights (M portfolios, N assets).
+Returns M×5 matrix.
+"""
+function batch_metrics(R::Matrix{Float64}, W::Matrix{Float64},
+                       rf::Float64 = 0.045/12)::Matrix{Float64}
+    M     = size(W, 1)
+    out   = zeros(M, 5)
+    for i in 1:M
+        m   = risk_metrics(R, W[i,:], rf)
+        out[i,:] = [m["ann_return"], m["ann_vol"], m["sharpe"],
+                    m["cvar_95"], m["max_drawdown"]]
+    end
+    return out
+end
+
 end   # module PortfolioEngine

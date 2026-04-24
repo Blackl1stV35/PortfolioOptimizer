@@ -1,31 +1,33 @@
-# add to facilitate binary wheel
---only-binary :all:
-
-# Core portfolio analytics
+# Core
 streamlit>=1.35.0
 yfinance>=0.2.40
-riskfolio-lib>=7.0.0
 plotly>=5.20.0
 pandas>=2.1.0
 numpy>=1.26.0
 pyyaml>=6.0.1
-openpyxl>=3.1.2
-xlsxwriter>=3.2.0
-icalendar>=5.0.12
 scipy>=1.12.0
 scikit-learn>=1.4.0
 requests>=2.31.0
 
-# Phase 2: Groq LLM
-groq>=0.9.0
+# Portfolio optimisation (Riskfolio kept as verification fallback)
+riskfolio-lib>=7.0.0
 
-# Phase 3: Advanced charts
+# Advanced charts
 pandas-ta>=0.4.71b0
 
-# SEC EDGAR intelligence
+# AI + LLM
+groq>=0.9.0
+
+# Calendar export
+icalendar>=5.0.12
+
+# SEC EDGAR
 edgartools>=5.0
 
 # Scheduler
 APScheduler>=3.10.0
 
-finnomena-api
+# Julia bridge (optional — install Julia separately, then uncomment)
+# juliacall>=0.9.0
+
+# Hugging Face Spaces (Phase 3 host — no extra deps needed)
